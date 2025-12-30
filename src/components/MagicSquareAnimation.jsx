@@ -242,6 +242,52 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
             ctx.fillText(`For ${wishData.recipientName}`, size / 2, size * 0.85);
 
             ctx.restore();
+
+            // --- PREMIUM ADDITION: Floating Emoji Particles ---
+            ctx.save();
+            const seed = wishData.recipientName.length + wishData.date.length;
+            const particleCount = 15;
+            for (let i = 0; i < particleCount; i++) {
+                const pSeed = seed + i;
+                const xBase = ((Math.sin(pSeed * 1.5) + 1) / 2) * size;
+                const yBase = ((Math.cos(pSeed * 2.1) + 1) / 2) * size;
+
+                // Slow floating movement
+                const offsetX = Math.sin(progress * 4 + pSeed) * 50;
+                const offsetY = -(progress - 0.7) * 200 + Math.cos(progress * 3 + pSeed) * 30;
+
+                const x = xBase + offsetX;
+                const y = yBase + offsetY;
+                const opacity = Math.min(0.6, finalP * 0.8) * Math.max(0, 1 - (progress - 0.7) * 1.2);
+
+                ctx.globalAlpha = opacity;
+                ctx.font = `${size * 0.04}px serif`;
+
+                const emojis = wishData.occasion === 'birthday' ? ['🎂', '🎈', '✨', '🎁'] :
+                    wishData.occasion === 'anniversary' ? ['❤️', '💕', '🌹', '✨'] :
+                        wishData.occasion === 'wedding' ? ['💍', '🥂', '🌸', '✨'] :
+                            ['✨', '💖', '⭐', '🎈'];
+
+                const emoji = emojis[pSeed % emojis.length];
+                ctx.fillText(emoji, x, y);
+            }
+            ctx.restore();
+
+            // --- PREMIUM ADDITION: Magical Glitter/Dust ---
+            ctx.save();
+            ctx.globalAlpha = finalP * 0.5;
+            for (let i = 0; i < 40; i++) {
+                const s = seed * i;
+                const gx = ((Math.sin(s * 0.8) + 1) / 2) * size;
+                const gy = ((Math.cos(s * 1.2) + 1) / 2) * size;
+                const gOpacity = (Math.sin(progress * 10 + s) + 1) / 2;
+
+                ctx.fillStyle = highlightColor;
+                ctx.beginPath();
+                ctx.arc(gx, gy, 1.5 * gOpacity, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
         }
 
     }, [square, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData]);
