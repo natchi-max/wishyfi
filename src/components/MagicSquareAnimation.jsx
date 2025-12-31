@@ -11,6 +11,7 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     const [bgImage, setBgImage] = useState(null);
     const [showGift, setShowGift] = useState(true);
     const [isOpening, setIsOpening] = useState(false);
+    const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
     const confettiRef = useRef([]); // To store confetti particles
     const auraRef = useRef([]); // To store aura particles
     const crackersRef = useRef([]); // To store firework/crackers particles during square reveal
