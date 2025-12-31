@@ -9,7 +9,8 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     const [isGenerating, setIsGenerating] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [bgImage, setBgImage] = useState(null);
-    const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+    const [showGift, setShowGift] = useState(isSharedView);
+    const [isOpening, setIsOpening] = useState(false);
     const confettiRef = useRef([]); // To store confetti particles
     const auraRef = useRef([]); // To store aura particles
     const crackersRef = useRef([]); // To store firework/crackers particles during square reveal
@@ -413,6 +414,8 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     };
 
     useEffect(() => {
+        if (showGift) return; // Don't animate while gift is closed
+
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         let frame = 0;
@@ -435,7 +438,14 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
 
         animate();
         return () => cancelAnimationFrame(animationId);
-    }, [renderFrame, totalFrames]);
+    }, [renderFrame, totalFrames, showGift]);
+
+    const handleOpenGift = () => {
+        setIsOpening(true);
+        setTimeout(() => {
+            setShowGift(false);
+        }, 800);
+    };
 
     const [gifBlob, setGifBlob] = useState(null);
     const [copySuccess, setCopySuccess] = useState(false);
@@ -565,6 +575,21 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
                     handleMouseMove(touch);
                 }}>
                     <canvas ref={canvasRef} width={size} height={size} />
+
+                    {/* --- GIFT OVERLAY --- */}
+                    {showGift && (
+                        <div className={`gift-overlay ${isOpening ? 'opening' : ''}`} onClick={handleOpenGift}>
+                            <div className="gift-content">
+                                <div className="gift-box">
+                                    <div className="gift-lid"></div>
+                                    <div className="gift-body"></div>
+                                    <div className="gift-ribbon"></div>
+                                </div>
+                                <h2 className="gift-text">A Magical Surprise for You! ✨</h2>
+                                <p className="gift-hint">Tap the gift to open</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="animation-actions text-center mt-lg">

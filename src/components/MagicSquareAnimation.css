@@ -363,3 +363,119 @@ canvas {
         justify-content: center;
     }
 }
+
+/* Gift Overlay */
+.gift-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: pointer;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: var(--radius-xl);
+}
+
+.gift-overlay.opening {
+    opacity: 0;
+    transform: scale(1.5);
+    pointer-events: none;
+}
+
+.gift-content {
+    text-align: center;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.gift-box {
+    position: relative;
+    width: 120px;
+    height: 100px;
+    background: #ff4757;
+    margin: 0 auto 30px;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(255, 71, 87, 0.4);
+}
+
+.gift-lid {
+    position: absolute;
+    top: -20px;
+    left: -5px;
+    width: 130px;
+    height: 25px;
+    background: #ff6b81;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 2;
+}
+
+.gift-ribbon {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 25px;
+    height: 120px;
+    background: #f1c40f;
+    z-index: 1;
+}
+
+.gift-ribbon::after {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 30px;
+    border: 6px solid #f1c40f;
+    border-radius: 50% 50% 0 0;
+}
+
+.gift-text {
+    font-family: 'Playfair Display', serif;
+    background: linear-gradient(to right, #fff, #f1c40f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.8rem !important;
+    margin-bottom: 10px !important;
+    color: white;
+}
+
+.gift-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
