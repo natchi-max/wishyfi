@@ -9,6 +9,9 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     const [isGenerating, setIsGenerating] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [bgImage, setBgImage] = useState(null);
+    const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+    const confettiRef = useRef([]); // To store confetti particles
+    const auraRef = useRef([]); // To store aura particles
 
     // Initialize AI Image
     useEffect(() => {
@@ -33,8 +36,8 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     const highlightColor = wishData.colorHighlight || '#ff6b6b';
     const bgColor = wishData.colorBg || '#0a0a0f';
 
-    // Total duration: 8 seconds at 60fps
-    const totalFrames = 480;
+    // Total duration: 10 seconds at 60fps (Cinematic pace)
+    const totalFrames = 600;
 
     const imgRef = useRef(new Image());
     useEffect(() => {
@@ -60,22 +63,22 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
 
     const renderFrame = useCallback((ctx, frame, total) => {
         const progress = frame / total;
-        // Timeline:
-        // 0.00 - 0.50: Magic Square Reveal (Rows 1-4)
-        // 0.50 - 0.75: Proof (Sums)
-        // 0.75 - 1.00: Image + Message
+        // Cinematic Timeline:
+        // 0.00 - 0.40: Magic Square Reveal (Faster, punchier)
+        // 0.40 - 0.60: Proof (Quick visual validation)
+        // 0.60 - 1.00: Heartful Image & Personalized Message (40% duration!)
 
         // Clear & Background
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, size, size);
 
-        // --- STAGE 1: MAGIC SQUARE REVEAL (0.0 - 0.5) ---
-        if (progress < 0.8) { // Keep visible until fade out
-            const squareP = Math.min(1, progress / 0.5);
-            drawGrid(ctx, 1 - Math.max(0, (progress - 0.7) * 10)); // Fade grid out at end
+        // --- STAGE 1: MAGIC SQUARE REVEAL (0.0 - 0.45) ---
+        if (progress < 0.6) {
+            const squareP = Math.min(1, progress / 0.4);
+            drawGrid(ctx, 1 - Math.max(0, (progress - 0.55) * 10)); // Fade grid out earlier
 
             // Determine active row for "Sliding Focus"
-            const rowPhaseDuration = 0.25;
+            const rowPhaseDuration = 0.1; // 0.4 total / 4 rows
 
             square.forEach((row, ri) => {
                 const rowStart = ri * rowPhaseDuration;
@@ -87,21 +90,21 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
 
                 // Opacity / Visibility
                 let rowOpacity = 0;
-                if (isCompletedRow) rowOpacity = 0.6; // Dimmed when done
-                if (isCurrentRow) rowOpacity = 1;     // Bright when active
-                if (ri === 0) rowOpacity = 1;         // First row (Date) always bright
+                if (isCompletedRow) rowOpacity = 0.6;
+                if (isCurrentRow) rowOpacity = 1;
+                if (ri === 0) rowOpacity = 1;
 
                 // Highlight Effect
-                const isHighlight = isCurrentRow || (ri === 0 && squareP < 0.25);
+                const isHighlight = isCurrentRow || (ri === 0 && squareP < 0.1);
 
                 // Fade out entire square at the end of animation
-                if (progress > 0.7) {
-                    rowOpacity *= (1 - (progress - 0.7) * 3.3);
+                if (progress > 0.55) {
+                    rowOpacity *= (1 - (progress - 0.55) * 5);
                 }
 
                 if (rowOpacity > 0) {
                     // Row Background Highlight
-                    if (isHighlight && progress < 0.5) {
+                    if (isHighlight && progress < 0.4) {
                         ctx.save();
                         ctx.fillStyle = highlightColor;
                         ctx.globalAlpha = 0.1;
@@ -117,7 +120,7 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
 
                     row.forEach((val, ci) => {
                         // Cell Reveal Effect (Sequential in row)
-                        const cellDelay = rowStart + (ci * 0.05); // Stagger within row
+                        const cellDelay = rowStart + (ci * 0.02); // Faster stagger
                         let cellP = (squareP - cellDelay) / 0.05;
                         cellP = Math.min(1, Math.max(0, cellP));
 
@@ -128,7 +131,7 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
                             ctx.fillStyle = (ri === 0) ? highlightColor : '#fff';
                             // Dynamic dimming
                             if (isCompletedRow && ri !== 0) ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                            if (isCompletedRow && ri === 0) ctx.fillStyle = highlightColor; // Keep date colored
+                            if (isCompletedRow && ri === 0) ctx.fillStyle = highlightColor;
 
                             // Fade out
                             ctx.globalAlpha = rowOpacity * cellP;
@@ -162,16 +165,14 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
             });
         }
 
-        // --- STAGE 2: PROOF LINES (0.50 - 0.75) ---
-        if (progress > 0.5 && progress < 0.8) {
-            const proofP = (progress - 0.5) / 0.25; // 0 to 1
+        // --- STAGE 2: PROOF LINES (0.40 - 0.60) ---
+        if (progress > 0.4 && progress < 0.65) {
+            const proofP = (progress - 0.4) / 0.2;
             ctx.save();
-            ctx.globalAlpha = 1 - Math.max(0, (progress - 0.75) * 4); // Fade out
+            ctx.globalAlpha = 1 - Math.max(0, (progress - 0.6) * 10);
             ctx.strokeStyle = highlightColor;
             ctx.lineWidth = 2;
 
-            // Draw all lines quickly
-            // vertical lines
             for (let i = 0; i < 4; i++) {
                 if (proofP > 0.2) {
                     const x = startX + i * cellSize + cellSize / 2;
@@ -179,10 +180,12 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
                     ctx.moveTo(x, startY);
                     ctx.lineTo(x, startY + gridSize);
                     ctx.stroke();
-                    if (proofP > 0.3) ctx.fillText(`= ${magicConstant}`, x, startY + gridSize + 30);
+                    if (proofP > 0.3) {
+                        ctx.fillStyle = highlightColor;
+                        ctx.fillText(`= ${magicConstant}`, x, startY + gridSize + 30);
+                    }
                 }
             }
-            // Diagonals
             if (proofP > 0.5) {
                 ctx.beginPath();
                 ctx.moveTo(startX, startY);
@@ -194,21 +197,17 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
                 ctx.lineTo(startX, startY + gridSize);
                 ctx.stroke();
             }
-
             ctx.restore();
         }
 
-        // --- STAGE 3: IMAGE & MESSAGE (0.75 - 1.0) ---
-        if (progress > 0.70) {
-            const finalP = (progress - 0.70) / 0.30; // 0 to 1
+        // --- STAGE 3: IMAGE & MESSAGE (0.60 - 1.0) ---
+        if (progress > 0.55) {
+            const finalP = Math.min(1, (progress - 0.55) / 0.20);
 
             if (imgRef.current && imgRef.current.complete) {
                 ctx.save();
                 ctx.globalAlpha = finalP;
-                // Draw Image
                 ctx.drawImage(imgRef.current, 0, 0, size, size);
-
-                // Gradient Overlay
                 const grad = ctx.createLinearGradient(0, size / 2, 0, size);
                 grad.addColorStop(0, 'rgba(0,0,0,0)');
                 grad.addColorStop(0.8, 'rgba(0,0,0,0.8)');
@@ -220,30 +219,23 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
             ctx.save();
             ctx.globalAlpha = Math.min(1, finalP * 1.5);
             ctx.translate(0, (1 - finalP) * 30);
-
-            // Text
             ctx.fillStyle = '#fff';
             ctx.textAlign = 'center';
-
-            // Title
             ctx.font = `bold ${size * 0.09}px 'Dancing Script', cursive`;
             ctx.fillText(`Happy ${wishData.occasion.charAt(0).toUpperCase() + wishData.occasion.slice(1)}!`, size / 2, size * 0.55);
 
-            // Message
             ctx.font = `italic ${size * 0.04}px 'Playfair Display', serif`;
             const lines = wishData.message.split('\n');
             lines.forEach((line, i) => {
                 ctx.fillText(line, size / 2, size * 0.65 + i * 50);
             });
 
-            // Name
             ctx.fillStyle = highlightColor;
             ctx.font = `bold ${size * 0.03}px 'Poppins', sans-serif`;
             ctx.fillText(`For ${wishData.recipientName}`, size / 2, size * 0.85);
-
             ctx.restore();
 
-            // --- PREMIUM ADDITION: Floating Emoji Particles ---
+            // Floating Emoji Particles
             ctx.save();
             const seed = wishData.recipientName.length + wishData.date.length;
             const particleCount = 15;
@@ -251,29 +243,24 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
                 const pSeed = seed + i;
                 const xBase = ((Math.sin(pSeed * 1.5) + 1) / 2) * size;
                 const yBase = ((Math.cos(pSeed * 2.1) + 1) / 2) * size;
-
-                // Slow floating movement
                 const offsetX = Math.sin(progress * 4 + pSeed) * 50;
                 const offsetY = -(progress - 0.7) * 200 + Math.cos(progress * 3 + pSeed) * 30;
-
                 const x = xBase + offsetX;
                 const y = yBase + offsetY;
-                const opacity = Math.min(0.6, finalP * 0.8) * Math.max(0, 1 - (progress - 0.7) * 1.2);
+                const opacity = Math.min(0.6, finalP * 0.8) * Math.max(0, 1 - (progress - 0.9) * 10);
 
                 ctx.globalAlpha = opacity;
                 ctx.font = `${size * 0.04}px serif`;
-
                 const emojis = wishData.occasion === 'birthday' ? ['🎂', '🎈', '✨', '🎁'] :
                     wishData.occasion === 'anniversary' ? ['❤️', '💕', '🌹', '✨'] :
                         wishData.occasion === 'wedding' ? ['💍', '🥂', '🌸', '✨'] :
                             ['✨', '💖', '⭐', '🎈'];
-
                 const emoji = emojis[pSeed % emojis.length];
                 ctx.fillText(emoji, x, y);
             }
             ctx.restore();
 
-            // --- PREMIUM ADDITION: Magical Glitter/Dust ---
+            // Magical Glitter
             ctx.save();
             ctx.globalAlpha = finalP * 0.5;
             for (let i = 0; i < 40; i++) {
@@ -281,7 +268,6 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
                 const gx = ((Math.sin(s * 0.8) + 1) / 2) * size;
                 const gy = ((Math.cos(s * 1.2) + 1) / 2) * size;
                 const gOpacity = (Math.sin(progress * 10 + s) + 1) / 2;
-
                 ctx.fillStyle = highlightColor;
                 ctx.beginPath();
                 ctx.arc(gx, gy, 1.5 * gOpacity, 0, Math.PI * 2);
@@ -290,7 +276,87 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
             ctx.restore();
         }
 
-    }, [square, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData]);
+        // Interactive Aura & Confetti
+        renderInteractions(ctx, size, mousePos, auraRef, confettiRef, progress);
+
+    }, [square, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData, mousePos]);
+
+    // Helper for interactive elements
+    const renderInteractions = (ctx, size, mouse, aura, confetti, progress) => {
+        // 1. Magic Aura (Mouse Follow)
+        if (mouse.x > 0) {
+            if (aura.current.length < 20) {
+                aura.current.push({
+                    x: mouse.x,
+                    y: mouse.y,
+                    r: Math.random() * 4 + 2,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 1.0,
+                    color: highlightColor
+                });
+            }
+        }
+
+        aura.current.forEach((p, i) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.02;
+            if (p.life <= 0) aura.current.splice(i, 1);
+
+            ctx.save();
+            ctx.globalAlpha = p.life * 0.5;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // 2. Confetti Burst (Trigger at progress ~0.6)
+        if (progress > 0.6 && progress < 0.63 && confetti.current.length === 0) {
+            for (let i = 0; i < 100; i++) {
+                confetti.current.push({
+                    x: size / 2,
+                    y: size / 2,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.8) * 15,
+                    r: Math.random() * 6 + 4,
+                    color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+                    rotation: Math.random() * Math.PI,
+                    rv: (Math.random() - 0.5) * 0.2
+                });
+            }
+        }
+
+        if (progress > 0.6) {
+            confetti.current.forEach((p) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // Gravity
+                p.vx *= 0.98; // Friction
+                p.rotation += p.rv;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 1.5);
+                ctx.restore();
+            });
+        }
+    };
+
+    // Mouse Tracking Event
+    const handleMouseMove = (e) => {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleX = canvasRef.current.width / rect.width;
+        const scaleY = canvasRef.current.height / rect.height;
+        setMousePos({
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        });
+    };
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -317,7 +383,8 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     const handleGenerateGif = async () => {
         setIsGenerating(true);
         try {
-            const blob = await createAnimatedGif(renderFrame, size, size, totalFrames, 50);
+            // Delay adjusted to 30ms for a smoother, slightly faster but longer-duration GIF (18s total)
+            const blob = await createAnimatedGif(renderFrame, size, size, totalFrames, 30);
             setGifBlob(blob);
             setGifUrl(URL.createObjectURL(blob));
             setIsFinished(true);
@@ -431,104 +498,83 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     return (
         <div className="animation-page page">
             <div className="animation-container">
-                <div className="canvas-wrapper cinematic-border">
+                <div className="canvas-wrapper cinematic-border" onMouseMove={handleMouseMove} onTouchMove={(e) => {
+                    const touch = e.touches[0];
+                    handleMouseMove(touch);
+                }}>
                     <canvas ref={canvasRef} width={size} height={size} />
                 </div>
-                <div className="animation-actions text-center mt-lg">
-                    {!isFinished ? (
-                        <div className="action-row">
-                            <button className="btn btn-secondary btn-large mr-md" onClick={onBack}>
-                                Back
-                            </button>
-                            <button className="btn btn-primary btn-large glow-on-hover" onClick={handleGenerateGif} disabled={isGenerating}>
-                                {isGenerating ? 'Weaving Magic Memory... (Please Wait)' : 'Save as Heartful Gift 🎁'}
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="gif-result fade-in">
-                            <h2 className="text-gradient mb-md">A Memory to Keep Forever</h2>
-                            <div className="gif-preview-box">
-                                <img src={gifUrl} alt="Magic Gift" className="gif-preview shadow-xl" />
-                            </div>
 
-                            {/* Main Actions */}
-                            <div className="mt-lg action-buttons">
-                                <a href={gifUrl} download={`magic_wish_${wishData.recipientName}.gif`} className="btn btn-primary btn-large">
-                                    Download 📥
+                <div className="animation-actions text-center mt-lg">
+                    {/* --- SHARE LINK SECTION (Always Visible for Sender) --- */}
+                    {!isSharedView && (
+                        <div className="share-section fast-share fade-in mb-xl">
+                            <p className="share-label text-gradient">✨ Your Magic Link is Ready!</p>
+                            <div className="share-link-box">
+                                <a
+                                    href={shareableLink || window.location.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="share-link-display"
+                                >
+                                    {shareableLink || window.location.href}
                                 </a>
-                                <button className="btn btn-secondary btn-large" onClick={onCreateAnother}>
-                                    Create New ✨
+                            </div>
+                            <div className="share-link-actions">
+                                <button className="share-link-btn" onClick={handleCopyLink}>
+                                    {linkCopied ? '✓ Copied!' : '📋 Copy Link'}
+                                </button>
+                                <button className="share-link-btn share-whatsapp-btn" onClick={handleWhatsAppShare}>
+                                    WhatsApp 📲
                                 </button>
                             </div>
+                        </div>
+                    )}
 
-                            {/* Share Section */}
-                            <div className="share-section mt-lg">
-                                <p className="share-label">Share your magical creation:</p>
+                    {/* --- MAIN ACTION ROW (GIF Generation) --- */}
+                    {!isSharedView && !isFinished && (
+                        <div className="action-row mb-lg">
+                            <button className="btn btn-secondary mr-md" onClick={onBack}>
+                                Edit Wish ✏️
+                            </button>
+                            <button className="btn btn-primary glow-on-hover" onClick={handleGenerateGif} disabled={isGenerating}>
+                                {isGenerating ? '🎨 Weaving High-Quality GIF...' : 'Download as GIF 🎁'}
+                            </button>
+                        </div>
+                    )}
 
-                                {/* Copy Link - Main Share Option */}
-                                <div className="share-link-box">
-                                    <a
-                                        href={shareableLink || window.location.href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="share-link-display"
-                                        title="Click to open in new tab"
-                                    >
-                                        {shareableLink || window.location.href}
-                                    </a>
-                                </div>
-                                <div className="share-link-actions">
-                                    <button
-                                        className="share-link-btn"
-                                        onClick={handleCopyLink}
-                                    >
-                                        {linkCopied ? '✓ Copied!' : '📋 Copy Link'}
-                                    </button>
-                                    <a
-                                        href={shareableLink || window.location.href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="share-link-btn share-open-btn"
-                                    >
-                                        🔗 Open Link
-                                    </a>
-                                </div>
-                                {linkCopied && <p className="copy-success">Link copied! Share it with anyone! 🎉</p>}
+                    {/* --- GIF RESULT (Visible once generated) --- */}
+                    {isFinished && !isSharedView && (
+                        <div className="gif-result fade-in mb-lg">
+                            <div className="gif-preview-box mb-md">
+                                <img src={gifUrl} alt="Magic Gift" className="gif-preview" />
+                            </div>
+                            <a href={gifUrl} download={`magic_wish_${wishData.recipientName}.gif`} className="btn btn-primary mb-md">
+                                Download GIF Now 📥
+                            </a>
+                        </div>
+                    )}
 
-                                <p className="share-or">or share directly:</p>
+                    {/* --- SHARED VIEW ACTIONS --- */}
+                    {isSharedView && (
+                        <div className="shared-view-actions fade-in mt-xl">
+                            <h3 className="text-secondary mb-md">Loved this magic wish?</h3>
+                            <button className="btn btn-primary btn-large shadow-glow" onClick={onCreateAnother}>
+                                Create Your Own Magic Wish ✨
+                            </button>
+                        </div>
+                    )}
 
-                                <div className="share-buttons">
-                                    {/* Native Share (shows on mobile) */}
-                                    {navigator.share && (
-                                        <button className="share-btn share-native" onClick={handleNativeShare} title="Share">
-                                            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                                                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
-                                            </svg>
-                                            Share
-                                        </button>
-                                    )}
-
-                                    {/* WhatsApp */}
-                                    <button className="share-btn share-whatsapp" onClick={handleWhatsAppShare} title="Share on WhatsApp">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                                        </svg>
-                                    </button>
-
-                                    {/* Twitter/X */}
-                                    <button className="share-btn share-twitter" onClick={handleTwitterShare} title="Share on X/Twitter">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                        </svg>
-                                    </button>
-
-                                    {/* Facebook */}
-                                    <button className="share-btn share-facebook" onClick={handleFacebookShare} title="Share on Facebook">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                                        </svg>
-                                    </button>
-                                </div>
+                    {/* --- SECONDARY SHARE BUTTONS (Always Visible) --- */}
+                    {!isSharedView && (
+                        <div className="social-share-row mt-md">
+                            <p className="share-or mb-sm">Or share via social:</p>
+                            <div className="share-buttons">
+                                {navigator.share && (
+                                    <button className="share-btn share-native" onClick={handleNativeShare}>Share File</button>
+                                )}
+                                <button className="share-btn share-twitter" onClick={handleTwitterShare}>Twitter</button>
+                                <button className="share-btn share-facebook" onClick={handleFacebookShare}>Facebook</button>
                             </div>
                         </div>
                     )}
