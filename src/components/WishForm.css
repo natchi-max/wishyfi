@@ -179,3 +179,43 @@ textarea.error {
         grid-template-columns: 1fr;
     }
 }
+
+.color-presets {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-xs);
+}
+
+.preset-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    background: linear-gradient(135deg, var(--p-highlight) 50%, var(--p-bg) 50%);
+    box-shadow: var(--shadow-sm);
+    padding: 0;
+    position: relative;
+}
+
+.preset-btn:hover {
+    transform: scale(1.15) rotate(15deg);
+    box-shadow: 0 0 15px var(--p-highlight);
+}
+
+.preset-btn::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.preset-btn:active {
+    transform: scale(0.9);
+}

@@ -22,6 +22,14 @@ const WishForm = ({ onSubmit, onBack }) => {
         { value: 'other', label: '✨ Other', emoji: '✨' }
     ];
 
+    const colorPresets = [
+        { name: 'Magical Cyan', highlight: '#00f2fe', bg: '#05071a' },
+        { name: 'Neon Pink', highlight: '#ff0080', bg: '#0f051d' },
+        { name: 'Royal Purple', highlight: '#a855f7', bg: '#1a0533' },
+        { name: 'Golden Sun', highlight: '#fee140', bg: '#1a0a0a' },
+        { name: 'Emerald', highlight: '#22c55e', bg: '#061a12' }
+    ];
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -185,6 +193,30 @@ const WishForm = ({ onSubmit, onBack }) => {
                             <span className="char-count">
                                 {formData.message.length}/200
                             </span>
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>🎨 Quick Themes</label>
+                        <div className="color-presets">
+                            {colorPresets.map(preset => (
+                                <button
+                                    key={preset.name}
+                                    type="button"
+                                    className="preset-btn"
+                                    style={{
+                                        '--p-highlight': preset.highlight,
+                                        '--p-bg': preset.bg,
+                                        border: formData.colorHighlight === preset.highlight ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)'
+                                    }}
+                                    onClick={() => setFormData(prev => ({
+                                        ...prev,
+                                        colorHighlight: preset.highlight,
+                                        colorBg: preset.bg
+                                    }))}
+                                    title={preset.name}
+                                />
+                            ))}
                         </div>
                     </div>
 
