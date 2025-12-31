@@ -12,6 +12,7 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
     const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
     const confettiRef = useRef([]); // To store confetti particles
     const auraRef = useRef([]); // To store aura particles
+    const crackersRef = useRef([]); // To store firework/crackers particles during square reveal
 
     // Initialize AI Image
     useEffect(() => {
@@ -159,6 +160,14 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
                         ctx.fillStyle = highlightColor;
                         ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
                         ctx.fillText(`= ${magicConstant}`, startX + gridSize + 40, startY + ri * cellSize + cellSize / 2);
+
+                        // --- NEW: Trigger Cracker Burst on Row Completion ---
+                        const triggerPoint = rowEnd;
+                        if (progress >= triggerPoint && progress < triggerPoint + 0.01) {
+                            const side = (ri % 2 === 0) ? startX - 50 : startX + gridSize + 50;
+                            const y = startY + ri * cellSize + cellSize / 2;
+                            triggerCracker(crackersRef, side, y, highlightColor);
+                        }
                         ctx.restore();
                     }
                 }
@@ -276,14 +285,49 @@ const MagicSquareAnimation = ({ wishData, onBack, onCreateAnother, shareableLink
             ctx.restore();
         }
 
-        // Interactive Aura & Confetti
-        renderInteractions(ctx, size, mousePos, auraRef, confettiRef, progress);
+        // Interactive Aura & Confetti & Crackers
+        renderInteractions(ctx, size, mousePos, auraRef, confettiRef, crackersRef, progress);
 
     }, [square, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData, mousePos]);
 
+    // Helper to trigger firework burst
+    const triggerCracker = (ref, x, y, color) => {
+        for (let i = 0; i < 30; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = 2 + Math.random() * 8;
+            ref.current.push({
+                x, y,
+                vx: Math.cos(angle) * velocity,
+                vy: Math.sin(angle) * velocity,
+                life: 1.0,
+                r: Math.random() * 3 + 1,
+                color: color
+            });
+        }
+    };
+
     // Helper for interactive elements
-    const renderInteractions = (ctx, size, mouse, aura, confetti, progress) => {
-        // 1. Magic Aura (Mouse Follow)
+    const renderInteractions = (ctx, size, mouse, aura, confetti, crackers, progress) => {
+        // 1. Crackers (Fireworks during Reveal)
+        crackers.current.forEach((p, i) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.1; // Gravity
+            p.life -= 0.015;
+            if (p.life <= 0) crackers.current.splice(i, 1);
+
+            ctx.save();
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // 2. Magic Aura (Mouse Follow)
         if (mouse.x > 0) {
             if (aura.current.length < 20) {
                 aura.current.push({
