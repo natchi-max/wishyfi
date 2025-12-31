@@ -48,6 +48,8 @@ function hslToRgb(h, s, l) {
  */
 export const generateCelebrationImage = async (wishData) => {
     const { occasion, recipientName, date } = wishData;
+    const highlight = wishData.colorHighlight || '#ff6b6b';
+    const bg = wishData.colorBg || '#0a0a0f';
 
     // Create a unique seed from user data
     const seed = `${recipientName}-${date}-${occasion}-v2`;
@@ -62,22 +64,22 @@ export const generateCelebrationImage = async (wishData) => {
     // Generate based on occasion
     switch (occasion) {
         case 'birthday':
-            generateBirthdayImage(ctx, size, rng);
+            generateBirthdayImage(ctx, size, rng, highlight, bg);
             break;
         case 'anniversary':
-            generateAnniversaryImage(ctx, size, rng);
+            generateAnniversaryImage(ctx, size, rng, highlight, bg);
             break;
         case 'newyear':
-            generateNewYearImage(ctx, size, rng);
+            generateNewYearImage(ctx, size, rng, highlight, bg);
             break;
         case 'wedding':
-            generateWeddingImage(ctx, size, rng);
+            generateWeddingImage(ctx, size, rng, highlight, bg);
             break;
         case 'graduation':
-            generateGraduationImage(ctx, size, rng);
+            generateGraduationImage(ctx, size, rng, highlight, bg);
             break;
         default:
-            generateMagicalImage(ctx, size, rng);
+            generateMagicalImage(ctx, size, rng, highlight, bg);
     }
 
     // Add unique personalized overlay
@@ -89,16 +91,16 @@ export const generateCelebrationImage = async (wishData) => {
 /**
  * Birthday - Warm pinks, golds, balloons, cake vibes
  */
-function generateBirthdayImage(ctx, size, rng) {
-    // Warm gradient background
+function generateBirthdayImage(ctx, size, rng, highlight, bg) {
+    // Warm gradient background influenced by user choice
     const gradient = ctx.createRadialGradient(
         size * 0.5, size * 0.4, 0,
         size * 0.5, size * 0.5, size * 0.8
     );
     gradient.addColorStop(0, '#fff5f8');
-    gradient.addColorStop(0.3, '#ffb6c1');
-    gradient.addColorStop(0.6, '#ff69b4');
-    gradient.addColorStop(1, '#c71585');
+    gradient.addColorStop(0.3, highlight + '88'); // 50% opacity highlight
+    gradient.addColorStop(0.7, highlight);
+    gradient.addColorStop(1, bg);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
 
@@ -147,12 +149,11 @@ function generateBirthdayImage(ctx, size, rng) {
 /**
  * Anniversary - Romantic reds, hearts, roses
  */
-function generateAnniversaryImage(ctx, size, rng) {
+function generateAnniversaryImage(ctx, size, rng, highlight, bg) {
     // Deep romantic gradient
     const gradient = ctx.createLinearGradient(0, 0, size, size);
-    gradient.addColorStop(0, '#1a0a0a');
-    gradient.addColorStop(0.3, '#3d0c0c');
-    gradient.addColorStop(0.6, '#8b0000');
+    gradient.addColorStop(0, bg);
+    gradient.addColorStop(0.5, highlight);
     gradient.addColorStop(1, '#ff4444');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
@@ -198,12 +199,12 @@ function generateAnniversaryImage(ctx, size, rng) {
 /**
  * New Year - Dark blue, gold, fireworks, stars
  */
-function generateNewYearImage(ctx, size, rng) {
+function generateNewYearImage(ctx, size, rng, highlight, bg) {
     // Night sky gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, size);
     gradient.addColorStop(0, '#000428');
-    gradient.addColorStop(0.5, '#004e92');
-    gradient.addColorStop(1, '#001529');
+    gradient.addColorStop(0.5, highlight);
+    gradient.addColorStop(1, bg);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
 
@@ -247,16 +248,16 @@ function generateNewYearImage(ctx, size, rng) {
 /**
  * Wedding - White, blush, elegant, flowers
  */
-function generateWeddingImage(ctx, size, rng) {
+function generateWeddingImage(ctx, size, rng, highlight, bg) {
     // Soft elegant gradient
     const gradient = ctx.createRadialGradient(
         size * 0.5, size * 0.3, 0,
         size * 0.5, size * 0.5, size
     );
     gradient.addColorStop(0, '#ffffff');
-    gradient.addColorStop(0.3, '#fff5f5');
-    gradient.addColorStop(0.6, '#ffe4e1');
-    gradient.addColorStop(1, '#e8d5d5');
+    gradient.addColorStop(0.4, highlight + '44');
+    gradient.addColorStop(0.8, highlight + '22');
+    gradient.addColorStop(1, bg);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
 
@@ -307,12 +308,11 @@ function generateWeddingImage(ctx, size, rng) {
 /**
  * Graduation - Navy, gold, academic
  */
-function generateGraduationImage(ctx, size, rng) {
+function generateGraduationImage(ctx, size, rng, highlight, bg) {
     // Academic gradient
     const gradient = ctx.createLinearGradient(0, 0, size, size);
-    gradient.addColorStop(0, '#0a1628');
-    gradient.addColorStop(0.4, '#1a3a5c');
-    gradient.addColorStop(0.7, '#2c5282');
+    gradient.addColorStop(0, bg);
+    gradient.addColorStop(0.5, highlight);
     gradient.addColorStop(1, '#1a365d');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
@@ -363,15 +363,14 @@ function generateGraduationImage(ctx, size, rng) {
 /**
  * Magical/Other - Cosmic purples, magical feel
  */
-function generateMagicalImage(ctx, size, rng) {
+function generateMagicalImage(ctx, size, rng, highlight, bg) {
     // Cosmic gradient
     const gradient = ctx.createRadialGradient(
         size * 0.3, size * 0.3, 0,
         size * 0.5, size * 0.5, size
     );
-    gradient.addColorStop(0, '#1a0533');
-    gradient.addColorStop(0.3, '#2d1b4e');
-    gradient.addColorStop(0.6, '#4a1c6e');
+    gradient.addColorStop(0, highlight);
+    gradient.addColorStop(0.6, bg);
     gradient.addColorStop(1, '#0f051d');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
