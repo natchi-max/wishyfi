@@ -137,11 +137,29 @@
 
 @media (max-width: 768px) {
     .features-grid {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-sm);
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-md);
     }
 
     .magic-symbol {
-        font-size: 4rem;
+        font-size: 3.5rem;
+    }
+
+    .landing-title {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .landing-title {
+        font-size: 2rem;
+    }
+
+    .magic-symbol {
+        font-size: 3rem;
     }
 }

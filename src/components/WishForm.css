@@ -4,6 +4,7 @@
 
 .wish-form-container {
     max-width: 600px;
+    width: 100%;
     margin: 0 auto;
     padding: var(--spacing-xl);
     background: var(--bg-card);
@@ -130,15 +131,35 @@ textarea.error {
     }
 
     .occasion-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-xs);
+    }
+
+    .occasion-btn {
+        padding: var(--spacing-sm);
     }
 
     .occasion-emoji {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
     }
 
     .occasion-label {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .wish-form-container {
+        padding: var(--spacing-md);
+    }
+
+    .occasion-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .row-flex {
+        flex-direction: column;
+        gap: var(--spacing-sm);
     }
 }
 
@@ -174,7 +195,7 @@ textarea.error {
     border: none;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 380px) {
     .occasion-grid {
         grid-template-columns: 1fr;
     }

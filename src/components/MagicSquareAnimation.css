@@ -21,12 +21,16 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: var(--spacing-xl) 0;
+    margin: var(--spacing-lg) 0;
+    max-width: 100%;
+    width: min(800px, 100%);
     background: #000;
     border: 2px solid rgba(255, 255, 255, 0.05);
     border-radius: var(--radius-xl);
     overflow: hidden;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    aspect-ratio: 1;
+    /* Maintain square shape */
 }
 
 canvas {
@@ -82,8 +86,9 @@ canvas {
     }
 
     .canvas-wrapper {
-        border-radius: 0;
-        margin: var(--spacing-md) -var(--spacing-md);
+        border-radius: var(--radius-lg);
+        margin: var(--spacing-md) 0;
+        width: 100%;
     }
 }
 
@@ -443,6 +448,7 @@ canvas {
     font-family: 'Playfair Display', serif;
     background: linear-gradient(to right, #fff, #f1c40f);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     font-size: 1.8rem !important;
     margin-bottom: 10px !important;
@@ -478,5 +484,30 @@ canvas {
 
     50% {
         opacity: 1;
+    }
+}
+
+/* Mobile Responsive Adjustments for Gift */
+@media (max-width: 500px) {
+    .gift-text {
+        font-size: 1.4rem !important;
+        padding: 0 20px;
+    }
+
+    .gift-box {
+        width: 100px;
+        height: 80px;
+    }
+
+    .gift-lid {
+        width: 110px;
+    }
+
+    .share-link-box {
+        max-width: 90%;
+    }
+
+    .animation-container {
+        padding: var(--spacing-sm);
     }
 }
