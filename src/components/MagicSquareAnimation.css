@@ -412,7 +412,7 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--gift-bg, #f8fafc) 0%, var(--gift-primary, #667eea) 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -538,4 +538,22 @@ canvas {
         font-size: 1rem;
         font-weight: 700;
     }
+}
+.generating-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.canvas-wrapper {
+    width: 100%;
+    max-width: min(90vw, 600px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+}
+
+.canvas-wrapper canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }

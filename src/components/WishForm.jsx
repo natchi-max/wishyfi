@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { wishTemplates, getRandomTemplate } from '../utils/templates';
 import './WishForm.css';
 
 const WishForm = () => {
@@ -17,6 +18,7 @@ const WishForm = () => {
         colorBg: initialData?.colorBg || '#ffffff'
     });
 
+    const [showDateDropdown, setShowDateDropdown] = useState(false);
     const [errors, setErrors] = useState({});
 
     const occasions = [
@@ -86,6 +88,17 @@ const WishForm = () => {
         e.preventDefault();
         if (validateForm()) {
             navigate('/animate', { state: { wishData: formData } });
+        }
+    };
+
+    const useTemplate = (occasion) => {
+        const template = getRandomTemplate(occasion);
+        if (template) {
+            setFormData(prev => ({
+                ...prev,
+                message: template.message,
+                colorHighlight: template.color
+            }));
         }
     };
 
@@ -186,17 +199,85 @@ const WishForm = () => {
 
                     {/* Special Date */}
                     <div className="form-group">
-                        <label htmlFor="date">📅 Special Date (DD/MM/YYYY)</label>
-                        <input
-                            type="text"
-                            id="date"
-                            name="date"
-                            value={formData.date}
-                            onChange={handleDateInputChange}
-                            placeholder="30/03/2007"
-                            maxLength="10"
-                            className={errors.date ? 'error' : ''}
-                        />
+                        <label htmlFor="date">📅 Special Date</label>
+
+                        <div className="date-input-container">
+                            <input
+                                type="text"
+                                id="date"
+                                name="date"
+                                value={formData.date}
+                                onChange={handleDateInputChange}
+                                onFocus={() => setShowDateDropdown(true)}
+                                placeholder="30/03/2007"
+                                maxLength="10"
+                                className={errors.date ? 'error' : ''}
+                            />
+                            <button
+                                type="button"
+                                className="date-dropdown-btn"
+                                onClick={() => setShowDateDropdown(!showDateDropdown)}
+                            >
+                                📅
+                            </button>
+
+                            {showDateDropdown && (
+                                <div className="date-dropdown-panel">
+                                    <select
+                                        value={formData.date.split('/')[0] || ''}
+                                        onChange={(e) => {
+                                            const day = e.target.value;
+                                            const parts = formData.date.split('/');
+                                            const newDate = `${day.padStart(2, '0')}/${parts[1] || '01'}/${parts[2] || new Date().getFullYear()}`;
+                                            setFormData(prev => ({ ...prev, date: newDate }));
+                                        }}
+                                        className="date-select-small"
+                                    >
+                                        <option value="">Day</option>
+                                        {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                            <option key={day} value={day}>{day}</option>
+                                        ))}
+                                    </select>
+
+                                    <select
+                                        value={formData.date.split('/')[1] || ''}
+                                        onChange={(e) => {
+                                            const month = e.target.value;
+                                            const parts = formData.date.split('/');
+                                            const newDate = `${parts[0] || '01'}/${month.padStart(2, '0')}/${parts[2] || new Date().getFullYear()}`;
+                                            setFormData(prev => ({ ...prev, date: newDate }));
+                                        }}
+                                        className="date-select-small"
+                                    >
+                                        <option value="">Month</option>
+                                        {[
+                                            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                                        ].map((month, i) => (
+                                            <option key={i + 1} value={i + 1}>{month}</option>
+                                        ))}
+                                    </select>
+
+                                    <select
+                                        value={formData.date.split('/')[2] || ''}
+                                        onChange={(e) => {
+                                            const year = e.target.value;
+                                            const parts = formData.date.split('/');
+                                            const newDate = `${parts[0] || ''}/${parts[1] || ''}/${year}`;
+                                            setFormData(prev => ({ ...prev, date: newDate }));
+                                            setShowDateDropdown(false);
+                                        }}
+                                        className="date-select-small"
+                                    >
+                                        <option value="">Year</option>
+                                        {Array.from({ length: 50 }, (_, i) => 2024 - i).map(year => (
+                                            <option key={year} value={year}>{year}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
                         {errors.date && (
                             <span className="error-message">{errors.date}</span>
                         )}
@@ -207,7 +288,17 @@ const WishForm = () => {
 
                     {/* Wish Message */}
                     <div className="form-group">
-                        <label htmlFor="message">💬 Wish Message</label>
+                        <div className="message-header">
+                            <label htmlFor="message">💬 Wish Message</label>
+                            <button
+                                type="button"
+                                className="template-btn"
+                                onClick={() => useTemplate(formData.occasion)}
+                                title="Get suggestion for this occasion"
+                            >
+                                ✨ Suggest
+                            </button>
+                        </div>
                         <textarea
                             id="message"
                             name="message"
@@ -231,22 +322,27 @@ const WishForm = () => {
                         <label>🎨 Quick Themes</label>
                         <div className="color-presets">
                             {colorPresets.map(preset => (
-                                <button
+                                <div
                                     key={preset.name}
-                                    type="button"
-                                    className="preset-btn"
-                                    style={{
-                                        '--p-highlight': preset.highlight,
-                                        '--p-bg': preset.bg,
-                                        border: formData.colorHighlight === preset.highlight ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)'
-                                    }}
+                                    className={`preset-item ${formData.colorHighlight === preset.highlight ? 'active' : ''}`}
                                     onClick={() => setFormData(prev => ({
                                         ...prev,
                                         colorHighlight: preset.highlight,
                                         colorBg: preset.bg
                                     }))}
-                                    title={preset.name}
-                                />
+                                >
+                                    <button
+                                        type="button"
+                                        className="preset-btn"
+                                        style={{
+                                            '--p-highlight': preset.highlight,
+                                            '--p-bg': preset.bg,
+                                            border: formData.colorHighlight === preset.highlight ? '3px solid var(--accent-purple)' : '2px solid rgba(0,0,0,0.15)'
+                                        }}
+                                        title={preset.name}
+                                    />
+                                    <span className="preset-name">{preset.name}</span>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -261,6 +357,7 @@ const WishForm = () => {
                                 onChange={(e) => setFormData({ ...formData, colorHighlight: e.target.value })}
                                 className="color-picker"
                             />
+                            <span className="helper-text">Click to customize</span>
                         </div>
                         <div className="color-input-group">
                             <label htmlFor="colorBg">Background Color</label>
@@ -271,6 +368,7 @@ const WishForm = () => {
                                 onChange={(e) => setFormData({ ...formData, colorBg: e.target.value })}
                                 className="color-picker"
                             />
+                            <span className="helper-text">Click to customize</span>
                         </div>
                     </div>
 
