@@ -4,7 +4,6 @@ import LandingPage from './components/LandingPage';
 import WishForm from './components/WishForm';
 import MagicSquareAnimation from './components/MagicSquareAnimation';
 import DigitalGreetingAnimation from './components/DigitalGreetingAnimation';
-import SharedWish from './components/SharedWish';
 import NotFound from './components/NotFound';
 
 export const router = createBrowserRouter([
@@ -27,10 +26,6 @@ export const router = createBrowserRouter([
       {
         path: 'digital/:wishId?',
         element: <DigitalGreetingAnimation />
-      },
-      {
-        path: 'share/:shareId',
-        element: <SharedWish />
       },
       {
         path: '*',
