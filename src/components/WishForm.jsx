@@ -10,12 +10,14 @@ const WishForm = () => {
 
     const [formData, setFormData] = useState({
         occasion: initialData?.occasion || 'birthday',
+        customOccasion: initialData?.customOccasion || '',
         recipientName: initialData?.recipientName || '',
         senderName: initialData?.senderName || '',
         date: initialData?.date || '',
         message: initialData?.message || '',
         colorHighlight: initialData?.colorHighlight || '#667eea',
-        colorBg: initialData?.colorBg || '#ffffff'
+        colorBg: initialData?.colorBg || '#ffffff',
+        animationStyle: initialData?.animationStyle || 'digital'
     });
 
     const [showDateDropdown, setShowDateDropdown] = useState(false);
@@ -26,7 +28,12 @@ const WishForm = () => {
         { value: 'anniversary', label: '💑 Anniversary', emoji: '💑' },
         { value: 'love', label: '❤️ Love', emoji: '❤️' },
         { value: 'wedding', label: '💍 Wedding', emoji: '💍' },
-        { value: 'gratitude', label: '🙏 Thank You', emoji: '🙏' },
+        { value: 'newyear', label: '🎆 New Year', emoji: '🎆' },
+        { value: 'diwali', label: '🪔 Diwali', emoji: '🪔' },
+        { value: 'christmas', label: '🎄 Christmas', emoji: '🎄' },
+        { value: 'pongal', label: '🌾 Pongal', emoji: '🌾' },
+        { value: 'eid', label: '☪️ Eid', emoji: '☪️' },
+        { value: 'graduation', label: '🎓 Graduation', emoji: '🎓' },
         { value: 'other', label: '✨ Other', emoji: '✨' }
     ];
 
@@ -87,7 +94,8 @@ const WishForm = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (validateForm()) {
-            navigate('/animate', { state: { wishData: formData } });
+            const route = formData.animationStyle === 'digital' ? '/digital' : '/animate';
+            navigate(route, { state: { wishData: formData } });
         }
     };
 
@@ -145,21 +153,75 @@ const WishForm = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="wish-form">
-                    {/* Occasion Selection */}
+                    {/* Occasion Selection - Dropdown */}
                     <div className="form-group">
                         <label htmlFor="occasion">🎉 Occasion</label>
-                        <div className="occasion-grid">
+                        <select
+                            id="occasion"
+                            name="occasion"
+                            value={formData.occasion}
+                            onChange={(e) => setFormData(prev => ({ ...prev, occasion: e.target.value }))}
+                            className="form-select"
+                        >
                             {occasions.map(occ => (
-                                <button
-                                    key={occ.value}
-                                    type="button"
-                                    className={`occasion-btn ${formData.occasion === occ.value ? 'active' : ''}`}
-                                    onClick={() => setFormData(prev => ({ ...prev, occasion: occ.value }))}
-                                >
-                                    <span className="occasion-emoji">{occ.emoji}</span>
-                                    <span className="occasion-label">{occ.label.replace(occ.emoji + ' ', '')}</span>
-                                </button>
+                                <option key={occ.value} value={occ.value}>
+                                    {occ.label}
+                                </option>
                             ))}
+                        </select>
+
+                        {/* Custom Occasion Input */}
+                        {formData.occasion === 'other' && (
+                            <div className="custom-occasion-input">
+                                <input
+                                    type="text"
+                                    placeholder="Enter custom occasion (e.g., Holi, Valentine's Day)"
+                                    value={formData.customOccasion}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, customOccasion: e.target.value }))}
+                                    className="form-input"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Animation Style Selection */}
+                    <div className="form-group">
+                        <label>🎬 Animation Style</label>
+                        <div className="animation-style-selector">
+                            <div 
+                                className={`style-option ${formData.animationStyle === 'digital' ? 'active' : ''}`}
+                                onClick={() => setFormData(prev => ({ ...prev, animationStyle: 'digital' }))}
+                            >
+                                <div className="style-preview digital-preview">
+                                    <div className="preview-grid">
+                                        <div className="preview-cell highlight"></div>
+                                        <div className="preview-cell"></div>
+                                        <div className="preview-cell"></div>
+                                        <div className="preview-cell"></div>
+                                    </div>
+                                </div>
+                                <div className="style-info">
+                                    <h4>Digital Greeting</h4>
+                                    <p>8-screen reveal with dramatic highlights</p>
+                                    <span className="style-badge new">NEW</span>
+                                </div>
+                            </div>
+                            
+                            <div 
+                                className={`style-option ${formData.animationStyle === 'classic' ? 'active' : ''}`}
+                                onClick={() => setFormData(prev => ({ ...prev, animationStyle: 'classic' }))}
+                            >
+                                <div className="style-preview classic-preview">
+                                    <div className="preview-square">
+                                        <div className="preview-sparkle">✨</div>
+                                    </div>
+                                </div>
+                                <div className="style-info">
+                                    <h4>Classic Magic</h4>
+                                    <p>Traditional square animation with message</p>
+                                    <span className="style-badge">ORIGINAL</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -377,6 +439,10 @@ const WishForm = () => {
                     </button>
                 </form>
             </div>
+
+            <footer className="site-footer">
+                <a href="http://wishyfi.com/" target="_blank" rel="noopener noreferrer">wishyfi.com</a>
+            </footer>
         </div>
     );
 };

@@ -65,20 +65,21 @@ const SharedWish = () => {
         <h1>✨ A Magical Wish for You</h1>
         <p>Someone special created this mathematical wish just for you!</p>
       </div>
-      
+
       <MagicSquareAnimation
         wishData={wishData}
         isSharedView={true}
-        onBack={() => {}}
-        onCreateAnother={() => {}}
+        onBack={() => { }}
+        onCreateAnother={() => { }}
         shareableLink={window.location.href}
       />
-      
+
       <div className="shared-wish-footer">
         <p>Want to create your own magical wish?</p>
         <Link to="/create" className="btn btn-primary">
           Create Your Wish
         </Link>
+        <a href="http://wishyfi.com/" target="_blank" rel="noopener noreferrer" className="site-link">wishyfi.com</a>
       </div>
     </div>
   );

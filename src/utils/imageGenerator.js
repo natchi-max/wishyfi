@@ -41,18 +41,141 @@ function hslToRgb(h, s, l) {
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
+// Pre-generated high-quality festival images (21 different events)
+const FESTIVAL_IMAGES = {
+    // Personal Celebrations
+    birthday: '/images/festivals/birthday.png',
+    anniversary: '/images/festivals/anniversary.png',
+    love: '/images/festivals/anniversary.png',
+    wedding: '/images/festivals/wedding.png',
+    engagement: '/images/festivals/engagement.png',
+    babyshower: '/images/festivals/babyshower.png',
+    graduation: '/images/festivals/graduation.png',
+    promotion: '/images/festivals/promotion.png',
+    retirement: '/images/festivals/retirement.png',
+
+    // Major Holidays
+    newyear: '/images/festivals/newyear.png',
+    christmas: '/images/festivals/christmas.png',
+    thanksgiving: '/images/festivals/thanksgiving.png',
+
+    // Indian Festivals
+    diwali: '/images/festivals/diwali.png',
+    pongal: '/images/festivals/pongal.png',
+    holi: '/images/festivals/holi.png',
+    onam: '/images/festivals/onam.png',
+    navratri: '/images/festivals/navratri.png',
+    ganeshchaturthi: '/images/festivals/ganeshchaturthi.png',
+    rakshabandhan: '/images/festivals/rakshabandhan.png',
+
+    // Religious
+    eid: '/images/festivals/eid.png',
+
+    // Family Days
+    mothersday: '/images/festivals/mothersday.png',
+    fathersday: '/images/festivals/fathersday.png'
+};
+
+/**
+ * Try to load a pre-generated festival image
+ */
+async function loadFestivalImage(occasion, customOccasion) {
+    // First check direct occasion match
+    if (FESTIVAL_IMAGES[occasion]) {
+        return await tryLoadImage(FESTIVAL_IMAGES[occasion]);
+    }
+
+    // Check custom occasion keywords
+    const text = (customOccasion || '').toLowerCase();
+    if (!text && !customOccasion) return null;
+
+    // Direct key match
+    for (const [key, path] of Object.entries(FESTIVAL_IMAGES)) {
+        if (text.includes(key)) {
+            return await tryLoadImage(path);
+        }
+    }
+
+    // Extended keyword matching for variations
+    const keywordMappings = {
+        // Festivals
+        'deepavali': 'diwali',
+        'xmas': 'christmas',
+        'harvest': 'pongal',
+        'thai pongal': 'pongal',
+        'ramadan': 'eid',
+        'eid mubarak': 'eid',
+        'durga puja': 'navratri',
+        'dandiya': 'navratri',
+        'garba': 'navratri',
+        'ganpati': 'ganeshchaturthi',
+        'vinayaka': 'ganeshchaturthi',
+        'rakhi': 'rakshabandhan',
+        'colors': 'holi',
+        'rangoli': 'diwali',
+
+        // Events
+        'new year': 'newyear',
+        'happy new year': 'newyear',
+        'baby shower': 'babyshower',
+        'newborn': 'babyshower',
+        'convocation': 'graduation',
+        'degree': 'graduation',
+        'job promotion': 'promotion',
+        'new job': 'promotion',
+        'success': 'promotion',
+        'achievement': 'promotion',
+        'engaged': 'engagement',
+        'propose': 'engagement',
+        'retire': 'retirement',
+
+        // Family
+        'mother': 'mothersday',
+        'mom': 'mothersday',
+        'amma': 'mothersday',
+        'father': 'fathersday',
+        'dad': 'fathersday',
+        'appa': 'fathersday',
+
+        // Love
+        'valentine': 'love',
+        'romantic': 'love',
+        'romance': 'love'
+    };
+
+    for (const [keyword, imageKey] of Object.entries(keywordMappings)) {
+        if (text.includes(keyword) && FESTIVAL_IMAGES[imageKey]) {
+            return await tryLoadImage(FESTIVAL_IMAGES[imageKey]);
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Try to load an image, return null if failed
+ */
+async function tryLoadImage(src) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
 /**
  * Generate a unique celebration image
- * @param {Object} wishData - { occasion, recipientName, date, message }
+ * @param {Object} wishData - { occasion, customOccasion, recipientName, date, message }
  * @returns {Promise<string>} Data URL of the unique image
  */
 export const generateCelebrationImage = async (wishData) => {
-    const { occasion, recipientName, date } = wishData;
+    const { occasion, customOccasion, recipientName, date } = wishData;
     const highlight = wishData.colorHighlight || '#ff6b6b';
     const bg = wishData.colorBg || '#0a0a0f';
 
-    // Create a unique seed from user data
-    const seed = `${recipientName}-${date}-${occasion}-v2`;
+    // Create a unique seed from user data (including custom occasion for uniqueness)
+    const seed = `${recipientName}-${date}-${occasion}-${customOccasion || ''}-v3`;
     const rng = seededRandom(seed);
 
     const canvas = document.createElement('canvas');
@@ -61,12 +184,35 @@ export const generateCelebrationImage = async (wishData) => {
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    // Generate based on occasion
-    switch (occasion) {
+    // Try to load pre-generated high-quality festival image first
+    const festivalImage = await loadFestivalImage(occasion, customOccasion);
+
+    if (festivalImage) {
+        // Use the pre-generated AI image as base
+        ctx.drawImage(festivalImage, 0, 0, size, size);
+
+        // Add personalized overlay and name signature on top
+        addPersonalizedOverlay(ctx, size, rng, recipientName + (customOccasion || ''));
+        addNameSignature(ctx, size, recipientName, highlight);
+
+        return canvas.toDataURL('image/jpeg', 0.92);
+    }
+
+    // Fallback to procedural generation if no pre-made image available
+    // Determine image style based on occasion or custom occasion keywords
+    let imageStyle = occasion;
+
+    if (occasion === 'other' && customOccasion) {
+        imageStyle = detectOccasionType(customOccasion.toLowerCase());
+    }
+
+    // Generate based on detected style
+    switch (imageStyle) {
         case 'birthday':
             generateBirthdayImage(ctx, size, rng, highlight, bg);
             break;
         case 'anniversary':
+        case 'love':
             generateAnniversaryImage(ctx, size, rng, highlight, bg);
             break;
         case 'newyear':
@@ -76,17 +222,109 @@ export const generateCelebrationImage = async (wishData) => {
             generateWeddingImage(ctx, size, rng, highlight, bg);
             break;
         case 'graduation':
-            generateGraduationImage(ctx, size, rng, highlight, bg);
+        case 'success':
+            generateGraduationImage(ctx, size, rng, highlight, bg, recipientName);
+            break;
+        case 'celebration':
+            generateCelebrationStyleImage(ctx, size, rng, highlight, bg, recipientName);
+            break;
+        case 'spiritual':
+            generateSpiritualImage(ctx, size, rng, highlight, bg, recipientName);
+            break;
+        case 'nature':
+            generateNatureImage(ctx, size, rng, highlight, bg, recipientName);
             break;
         default:
-            generateMagicalImage(ctx, size, rng, highlight, bg);
+            generateMagicalImage(ctx, size, rng, highlight, bg, recipientName);
     }
 
-    // Add unique personalized overlay
-    addPersonalizedOverlay(ctx, size, rng, recipientName);
+    // Add unique personalized overlay based on name and occasion
+    addPersonalizedOverlay(ctx, size, rng, recipientName + (customOccasion || ''));
+
+    // Add name-based personal accent (subtle signature based on name)
+    addNameSignature(ctx, size, recipientName, highlight);
 
     return canvas.toDataURL('image/jpeg', 0.92);
 };
+
+/**
+ * Generate a personal color from the recipient's name
+ */
+function getPersonalColor(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 60%)`;
+}
+
+/**
+ * Add a subtle name-based signature to the image
+ */
+function addNameSignature(ctx, size, name, highlight) {
+    if (!name) return;
+
+    // Get personal color based on name
+    const personalColor = getPersonalColor(name);
+    const nameSum = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+
+    // Add subtle corner glow based on name
+    ctx.save();
+    const cornerX = (nameSum % 2 === 0) ? 0 : size;
+    const cornerY = (nameSum % 3 === 0) ? 0 : size;
+    const grad = ctx.createRadialGradient(cornerX, cornerY, 0, cornerX, cornerY, size * 0.5);
+    grad.addColorStop(0, personalColor.replace('60%)', '60%, 0.15)').replace('hsl', 'hsla'));
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    ctx.restore();
+
+    // Add name-length based sparkle pattern
+    const sparkleCount = Math.min(name.length * 3, 30);
+    for (let i = 0; i < sparkleCount; i++) {
+        const charCode = name.charCodeAt(i % name.length);
+        const x = ((charCode * (i + 1) * 7) % size);
+        const y = ((charCode * (i + 1) * 11) % size);
+        const sparkleSize = (charCode % 3) + 1;
+
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = personalColor;
+        ctx.beginPath();
+        ctx.arc(x, y, sparkleSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+/**
+ * Detect occasion type from custom text using keywords
+ */
+function detectOccasionType(text) {
+    const keywords = {
+        birthday: ['birthday', 'bday', 'born', 'birth'],
+        anniversary: ['anniversary', 'married', 'years together', 'relationship'],
+        love: ['love', 'valentine', 'heart', 'romance', 'romantic'],
+        wedding: ['wedding', 'marriage', 'bride', 'groom', 'engagement', 'engaged'],
+        graduation: ['graduation', 'graduate', 'degree', 'diploma', 'convocation'],
+        success: ['promotion', 'job', 'success', 'achievement', 'accomplishment', 'new job', 'career'],
+        newyear: ['new year', 'newyear', 'year end', 'year beginning'],
+        celebration: ['party', 'celebration', 'festival', 'diwali', 'christmas', 'eid', 'holi', 'pongal'],
+        spiritual: ['blessing', 'prayer', 'god', 'religious', 'spiritual', 'temple', 'church', 'mosque'],
+        nature: ['travel', 'trip', 'vacation', 'holiday', 'journey', 'adventure']
+    };
+
+    for (const [type, words] of Object.entries(keywords)) {
+        for (const word of words) {
+            if (text.includes(word)) {
+                return type;
+            }
+        }
+    }
+
+    return 'magical'; // Default fallback
+}
 
 /**
  * Birthday - Warm pinks, golds, balloons, cake vibes
@@ -440,6 +678,167 @@ function generateMagicalImage(ctx, size, rng, highlight, bg) {
     for (let i = 0; i < 50; i++) {
         addSparkles(ctx, size, rng, 1, `hsla(${rng() * 360}, 100%, 75%, 0.9)`);
     }
+}
+
+/**
+ * Celebration/Festival Style - Vibrant, colorful, party vibes
+ */
+function generateCelebrationStyleImage(ctx, size, rng, highlight, bg) {
+    // Vibrant multi-color gradient
+    const gradient = ctx.createRadialGradient(
+        size * 0.5, size * 0.5, 0,
+        size * 0.5, size * 0.5, size * 0.8
+    );
+    gradient.addColorStop(0, '#ffd700');
+    gradient.addColorStop(0.3, highlight);
+    gradient.addColorStop(0.6, '#ff6b6b');
+    gradient.addColorStop(1, bg);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    // Festival lights
+    for (let i = 0; i < 30; i++) {
+        const x = rng() * size;
+        const y = rng() * size;
+        const r = rng() * 40 + 20;
+        const hue = rng() * 360;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, `hsla(${hue}, 100%, 70%, 0.6)`);
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+    }
+
+    // Colorful confetti
+    for (let i = 0; i < 150; i++) {
+        const x = rng() * size;
+        const y = rng() * size;
+        const w = rng() * 10 + 3;
+        const h = rng() * 20 + 5;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rng() * Math.PI * 2);
+        ctx.fillStyle = `hsla(${rng() * 360}, 90%, 60%, ${rng() * 0.7 + 0.3})`;
+        ctx.fillRect(-w / 2, -h / 2, w, h);
+        ctx.restore();
+    }
+
+    // Glitter effect
+    addSparkles(ctx, size, rng, 100, '#ffd700');
+    addSparkles(ctx, size, rng, 80, '#fff');
+    for (let i = 0; i < 60; i++) {
+        addSparkles(ctx, size, rng, 1, `hsl(${rng() * 360}, 100%, 70%)`);
+    }
+}
+
+/**
+ * Spiritual/Blessing Style - Warm, divine, peaceful
+ */
+function generateSpiritualImage(ctx, size, rng, highlight, bg) {
+    // Divine warm gradient
+    const gradient = ctx.createRadialGradient(
+        size * 0.5, size * 0.2, 0,
+        size * 0.5, size * 0.5, size
+    );
+    gradient.addColorStop(0, '#fff8dc');
+    gradient.addColorStop(0.3, '#ffd700');
+    gradient.addColorStop(0.6, highlight);
+    gradient.addColorStop(1, bg);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    // Divine rays
+    ctx.save();
+    ctx.translate(size / 2, size * 0.2);
+    for (let i = 0; i < 16; i++) {
+        ctx.rotate(Math.PI / 8);
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.08)';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-40, size);
+        ctx.lineTo(40, size);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // Soft glow orbs
+    for (let i = 0; i < 12; i++) {
+        const x = rng() * size;
+        const y = rng() * size;
+        const r = rng() * 80 + 40;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, `rgba(255, 215, 0, ${rng() * 0.2})`);
+        grad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+    }
+
+    // Golden sparkles
+    addSparkles(ctx, size, rng, 80, '#ffd700');
+    addSparkles(ctx, size, rng, 40, '#fff8dc');
+}
+
+/**
+ * Nature/Travel Style - Greens, blues, adventure
+ */
+function generateNatureImage(ctx, size, rng, highlight, bg) {
+    // Nature gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, size);
+    gradient.addColorStop(0, '#87ceeb');
+    gradient.addColorStop(0.4, '#4ecdc4');
+    gradient.addColorStop(0.7, highlight);
+    gradient.addColorStop(1, bg);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    // Cloud-like shapes
+    for (let i = 0; i < 8; i++) {
+        const x = rng() * size;
+        const y = rng() * size * 0.4;
+        const cloudSize = rng() * 100 + 50;
+        ctx.fillStyle = `rgba(255, 255, 255, ${rng() * 0.3 + 0.1})`;
+        for (let j = 0; j < 5; j++) {
+            ctx.beginPath();
+            ctx.arc(x + j * cloudSize * 0.3, y, cloudSize * (0.5 + rng() * 0.5), 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Floating leaves
+    for (let i = 0; i < 30; i++) {
+        const x = rng() * size;
+        const y = rng() * size;
+        const leafSize = rng() * 20 + 10;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rng() * Math.PI * 2);
+        ctx.fillStyle = `hsla(${100 + rng() * 40}, 60%, ${40 + rng() * 20}%, ${rng() * 0.4 + 0.2})`;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, leafSize, leafSize / 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // Sun rays
+    ctx.save();
+    ctx.globalAlpha = 0.1;
+    ctx.translate(size * 0.8, size * 0.15);
+    for (let i = 0; i < 12; i++) {
+        ctx.rotate(Math.PI / 6);
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-15, size * 0.5);
+        ctx.lineTo(15, size * 0.5);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // Nature sparkles
+    addSparkles(ctx, size, rng, 50, '#fff');
+    addSparkles(ctx, size, rng, 30, '#4ecdc4');
 }
 
 // === HELPER DRAWING FUNCTIONS ===

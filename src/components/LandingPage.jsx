@@ -69,6 +69,10 @@ const LandingPage = () => {
                     <div className="wheel"></div>
                 </div>
             </div>
+
+            <footer className="site-footer">
+                <a href="http://wishyfi.com/" target="_blank" rel="noopener noreferrer">wishyfi.com</a>
+            </footer>
         </div>
     );
 };

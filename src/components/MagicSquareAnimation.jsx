@@ -23,7 +23,7 @@ const MagicSquareAnimation = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [bgImage, setBgImage] = useState(null);
-    const [showGift, setShowGift] = useState(true);
+    const [showGift, setShowGift] = useState(false); // Animation plays immediately like a GIF
     const [isOpening, setIsOpening] = useState(false);
     const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
     const [shareableLink, setShareableLink] = useState('');
@@ -96,8 +96,8 @@ const MagicSquareAnimation = () => {
     const highlightColor = wishData?.colorHighlight || '#667eea';
     const bgColor = wishData?.colorBg || '#ffffff';
 
-    // Total duration: ~25 seconds on screen (at 60fps), much longer in GIF
-    const totalFrames = 1500;
+    // Total duration: ~32 seconds on screen (30% slower than before)
+    const totalFrames = 1950;
 
     const imgRef = useRef(new Image());
     useEffect(() => {
@@ -124,11 +124,13 @@ const MagicSquareAnimation = () => {
     const renderFrame = useCallback((ctx, frame, total) => {
         const progress = frame / total;
 
-        // NEW Animation Timeline:
-        // 0.00 - 0.40: ROWS - Show each row with total (4 rows × 10% each)
-        // 0.40 - 0.56: COLUMNS - Show each column with total (4 columns × 4% each)
-        // 0.56 - 0.68: DATE HIGHLIGHT - Special highlight on first row (the date)
-        // 0.68 - 1.00: MESSAGE - Show heartful image and personalized message
+        // CLEAN Animation Timeline (No overlapping screens):
+        // Screen 1 (0.00 - 0.12): Opening intro text
+        // Screen 2 (0.12 - 0.22): Grid appear with all numbers
+        // Screen 3 (0.22 - 0.45): Rows highlight one-by-one with sums
+        // Screen 4 (0.45 - 0.55): Column highlights showing same sum
+        // Screen 5 (0.55 - 0.68): Date row special highlight with labels
+        // Screen 6 (0.68 - 1.00): Final greeting screen
 
         // Clear & Background
         ctx.fillStyle = bgColor;
@@ -136,300 +138,362 @@ const MagicSquareAnimation = () => {
 
         const isLtTheme = TinyColor(bgColor).isLight();
         const baseTextColor = isLtTheme ? '#1e293b' : '#fff';
-        const dimTextColor = isLtTheme ? 'rgba(30, 41, 59, 0.5)' : 'rgba(255,255,255,0.5)';
 
-        // Helper function to draw a cell
-        const drawCell = (ri, ci, opacity, isHighlight = false) => {
+        // ========== HELPER FUNCTIONS ==========
+
+        // Draw a single cell with number
+        const drawCell = (ri, ci, opacity, color = null, bold = false) => {
+            if (opacity <= 0) return;
             const val = square[ri][ci];
             const x = startX + ci * cellSize + cellSize / 2;
             const y = startY + ri * cellSize + cellSize / 2;
 
             ctx.save();
-            ctx.globalAlpha = opacity;
+            ctx.globalAlpha = Math.min(1, opacity);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.fillStyle = color || baseTextColor;
+            ctx.font = bold
+                ? `bold ${cellSize * 0.42}px 'Poppins', sans-serif`
+                : `${cellSize * 0.38}px 'Poppins', sans-serif`;
 
-            if (isHighlight) {
-                const hueShift = (progress * 360 + ri * 20 + ci * 20) % 360;
-                ctx.fillStyle = `hsl(${hueShift}, 100%, 60%)`;
-                ctx.shadowColor = `hsl(${hueShift}, 100%, 50%)`;
-                ctx.shadowBlur = 15;
-                ctx.font = `bold ${cellSize * 0.42}px 'Poppins', sans-serif`;
-            } else {
-                ctx.fillStyle = baseTextColor;
-                ctx.font = `${cellSize * 0.38}px 'Poppins', sans-serif`;
+            if (color) {
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 12;
             }
 
             ctx.fillText(formatTwoDigit(val), x, y);
             ctx.restore();
         };
 
-        // Helper function to draw row highlight background
-        const drawRowHighlight = (ri, opacity) => {
+        // Draw all cells
+        const drawAllCells = (opacity, highlightRow = -1, highlightCol = -1, highlightColor = null) => {
+            for (let ri = 0; ri < 4; ri++) {
+                for (let ci = 0; ci < 4; ci++) {
+                    const isHighlighted = ri === highlightRow || ci === highlightCol;
+                    const cellOpacity = isHighlighted ? opacity : opacity * 0.5;
+                    drawCell(ri, ci, cellOpacity, isHighlighted ? highlightColor : null, isHighlighted);
+                }
+            }
+        };
+
+        // Draw row background highlight
+        const drawRowBg = (ri, opacity, color = highlightColor) => {
             ctx.save();
-            ctx.fillStyle = highlightColor;
-            ctx.globalAlpha = 0.15 * opacity;
+            ctx.globalAlpha = opacity * 0.2;
+            ctx.fillStyle = color;
             ctx.fillRect(startX, startY + ri * cellSize, gridSize, cellSize);
             ctx.restore();
         };
 
-        // Helper function to draw column highlight background
-        const drawColHighlight = (ci, opacity) => {
+        // Draw column background highlight
+        const drawColBg = (ci, opacity, color = highlightColor) => {
             ctx.save();
-            ctx.fillStyle = highlightColor;
-            ctx.globalAlpha = 0.15 * opacity;
+            ctx.globalAlpha = opacity * 0.2;
+            ctx.fillStyle = color;
             ctx.fillRect(startX + ci * cellSize, startY, cellSize, gridSize);
             ctx.restore();
         };
 
-        // Helper to draw sum text
+        // Draw sum text
         const drawSum = (text, x, y, opacity) => {
+            if (opacity <= 0) return;
             ctx.save();
             ctx.globalAlpha = opacity;
             ctx.fillStyle = highlightColor;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
+            ctx.font = `bold ${cellSize * 0.26}px 'Poppins', sans-serif`;
             ctx.shadowColor = highlightColor;
             ctx.shadowBlur = 8;
             ctx.fillText(text, x, y);
             ctx.restore();
         };
 
-        // Draw grid
-        const gridOpacity = progress < 0.65 ? 1 : Math.max(0, 1 - (progress - 0.65) * 10);
-        if (gridOpacity > 0) {
-            drawGrid(ctx, gridOpacity);
+        // Smooth fade helper
+        const smoothFade = (p, fadeInEnd, fadeOutStart) => {
+            if (p < fadeInEnd) return p / fadeInEnd;
+            if (p > fadeOutStart) return Math.max(0, 1 - (p - fadeOutStart) / (1 - fadeOutStart));
+            return 1;
+        };
+
+        // ========== SCREEN 1: INTRO TEXT (0.00 - 0.12) ==========
+        if (progress < 0.12) {
+            const p = progress / 0.12;
+
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // "Hi [Name]" (0-35%)
+            if (p < 0.38) {
+                const textP = p / 0.35;
+                const fade = smoothFade(textP, 0.3, 0.7);
+                ctx.globalAlpha = fade;
+                ctx.fillStyle = highlightColor;
+                ctx.font = `bold ${size * 0.1}px 'Playfair Display', serif`;
+                ctx.shadowColor = highlightColor;
+                ctx.shadowBlur = 20;
+                ctx.fillText(`Hi ${wishData?.recipientName || 'Friend'}`, size / 2, size / 2);
+            }
+            // "This is not random" (35-70%)
+            else if (p < 0.72) {
+                const textP = (p - 0.35) / 0.35;
+                const fade = smoothFade(textP, 0.3, 0.7);
+                ctx.globalAlpha = fade;
+                ctx.fillStyle = baseTextColor;
+                ctx.font = `italic ${size * 0.055}px 'Playfair Display', serif`;
+                ctx.shadowColor = highlightColor;
+                ctx.shadowBlur = 10;
+                ctx.fillText('This is not random', size / 2, size / 2);
+            }
+            // "Watch closely..." (70-100%)
+            else {
+                const textP = (p - 0.70) / 0.30;
+                const fade = smoothFade(textP, 0.3, 0.8);
+                ctx.globalAlpha = fade;
+                ctx.fillStyle = highlightColor;
+                ctx.font = `bold ${size * 0.065}px 'Poppins', sans-serif`;
+                ctx.shadowColor = highlightColor;
+                ctx.shadowBlur = 25;
+                ctx.fillText('Watch closely...', size / 2, size / 2);
+            }
+
+            ctx.restore();
         }
 
-        // --- STAGE 1: ROWS (0.00 - 0.50) ---
-        if (progress < 0.8) {
-            const rowPhase = 0.125; // 12.5% per row (slower)
+        // ========== SCREEN 2: GRID APPEAR (0.12 - 0.22) ==========
+        else if (progress >= 0.12 && progress < 0.22) {
+            const p = (progress - 0.12) / 0.10;
+            const fade = smoothFade(p, 0.3, 0.85);
 
+            // Draw grid lines
+            drawGrid(ctx, fade);
+
+            // Animate cells appearing
             for (let ri = 0; ri < 4; ri++) {
-                const rowStart = ri * rowPhase;
-                const rowEnd = rowStart + rowPhase;
-                const isCurrentRow = progress >= rowStart && progress < rowEnd;
-                const isCompletedRow = progress >= rowEnd;
+                for (let ci = 0; ci < 4; ci++) {
+                    const cellIndex = ri * 4 + ci;
+                    const delay = cellIndex * 0.04;
+                    const cellP = Math.max(0, Math.min(1, (p - delay) / 0.15));
+                    drawCell(ri, ci, cellP * fade, null, false);
+                }
+            }
+        }
 
-                // Determine row opacity
+        // ========== SCREEN 3: ROWS WITH SUMS (0.22 - 0.45) ==========
+        else if (progress >= 0.22 && progress < 0.45) {
+            const p = (progress - 0.22) / 0.23;
+            const rowColors = [highlightColor, '#ff6b6b', '#4ecdc4', '#a855f7'];
+
+            // Draw grid
+            drawGrid(ctx, 1);
+
+            // Each row gets ~23% of this phase
+            for (let ri = 0; ri < 4; ri++) {
+                const rowStart = ri * 0.25;
+                const rowEnd = rowStart + 0.25;
+                const isActive = p >= rowStart && p < rowEnd;
+                const isDone = p >= rowEnd;
+
                 let rowOpacity = 0;
-                if (isCurrentRow) {
-                    rowOpacity = Math.min(1, (progress - rowStart) / 0.02); // Quick fade in
-                } else if (isCompletedRow) {
-                    rowOpacity = 0.6;
+                if (isActive) {
+                    rowOpacity = Math.min(1, (p - rowStart) / 0.08);
+                } else if (isDone) {
+                    rowOpacity = 0.5;
                 }
 
-                // Fade out all during transition to message
-                if (progress > 0.75) {
-                    rowOpacity *= Math.max(0, 1 - (progress - 0.75) * 10);
-                }
-
+                // Draw row highlight and cells
                 if (rowOpacity > 0) {
-                    // Highlight current row
-                    if (isCurrentRow && progress < 0.40) {
-                        drawRowHighlight(ri, 1);
+                    if (isActive) {
+                        drawRowBg(ri, 1, rowColors[ri]);
                     }
 
-                    // Draw cells for this row
                     for (let ci = 0; ci < 4; ci++) {
-                        const cellDelay = rowStart + ci * 0.015;
-                        const cellOpacity = Math.min(1, Math.max(0, (progress - cellDelay) / 0.02));
-                        if (cellOpacity > 0) {
-                            drawCell(ri, ci, rowOpacity * cellOpacity, isCurrentRow);
-                        }
+                        const cellDelay = rowStart + ci * 0.03;
+                        const cellOpacity = Math.min(1, Math.max(0, (p - cellDelay) / 0.06));
+                        drawCell(ri, ci, cellOpacity, isActive ? rowColors[ri] : null, isActive);
                     }
 
-                    // Show row total when row is complete or completing
-                    if (progress > rowStart + 0.06) {
-                        const sumOpacity = Math.min(1, (progress - rowStart - 0.06) / 0.02) * rowOpacity;
-                        drawSum(`= ${magicConstant}`, startX + gridSize + 50, startY + ri * cellSize + cellSize / 2, sumOpacity);
-
-                        // Trigger cracker on row completion
-                        if (progress >= rowEnd && progress < rowEnd + 0.005) {
-                            const side = (ri % 2 === 0) ? startX - 30 : startX + gridSize + 30;
-                            triggerCracker(crackersRef, side, startY + ri * cellSize + cellSize / 2, highlightColor);
-                        }
+                    // Show sum after cells appear
+                    if (p > rowStart + 0.15) {
+                        const sumOpacity = Math.min(1, (p - rowStart - 0.15) / 0.05);
+                        drawSum(`= ${magicConstant}`, startX + gridSize + 55, startY + ri * cellSize + cellSize / 2, sumOpacity * (isActive ? 1 : 0.5));
                     }
                 }
             }
         }
 
-        // --- STAGE 2: COLUMNS (0.50 - 0.70) ---
-        if (progress >= 0.50 && progress < 0.8) {
-            const colPhaseStart = 0.50;
-            const colPhase = 0.05; // 5% per column (slower)
+        // ========== SCREEN 4: COLUMN HIGHLIGHTS (0.45 - 0.55) ==========
+        else if (progress >= 0.45 && progress < 0.55) {
+            const p = (progress - 0.45) / 0.10;
+            const fade = smoothFade(p, 0.2, 0.85);
+
+            // Draw grid
+            drawGrid(ctx, fade);
+
+            // Highlight each column briefly
+            const currentCol = Math.floor(p * 4.5) % 4;
 
             for (let ci = 0; ci < 4; ci++) {
-                const colStart = colPhaseStart + ci * colPhase;
-                const colEnd = colStart + colPhase;
-                const isCurrentCol = progress >= colStart && progress < colEnd;
-                const isCompletedCol = progress >= colEnd;
-
-                let colOpacity = 0;
-                if (isCurrentCol) {
-                    colOpacity = 1;
-                } else if (isCompletedCol) {
-                    colOpacity = 0.6;
-                }
-
-                // Fade out during transition
-                if (progress > 0.75) {
-                    colOpacity *= Math.max(0, 1 - (progress - 0.75) * 10);
-                }
-
-                if (colOpacity > 0 && isCurrentCol) {
-                    drawColHighlight(ci, 1);
-
-                    // Show column total
-                    if (progress > colStart + 0.02) {
-                        drawSum(`= ${magicConstant}`, startX + ci * cellSize + cellSize / 2, startY + gridSize + 35, colOpacity);
-                    }
+                const isActive = ci === currentCol;
+                if (isActive) {
+                    drawColBg(ci, fade, '#4ecdc4');
                 }
             }
+
+            // Draw all cells
+            for (let ri = 0; ri < 4; ri++) {
+                for (let ci = 0; ci < 4; ci++) {
+                    const isHighlighted = ci === currentCol;
+                    drawCell(ri, ci, fade, isHighlighted ? '#4ecdc4' : null, isHighlighted);
+                }
+            }
+
+            // Show column sum
+            drawSum(`= ${magicConstant}`, startX + currentCol * cellSize + cellSize / 2, startY + gridSize + 40, fade);
+
+            // Title
+            ctx.save();
+            ctx.globalAlpha = fade;
+            ctx.fillStyle = '#4ecdc4';
+            ctx.textAlign = 'center';
+            ctx.font = `bold ${cellSize * 0.22}px 'Poppins', sans-serif`;
+            ctx.fillText('Every Column = Same Magic Sum!', startX + gridSize / 2, startY - 35);
+            ctx.restore();
         }
 
-        // --- STAGE 3: DATE HIGHLIGHT (0.70 - 0.85) ---
-        if (progress >= 0.70 && progress < 0.85) {
-            const dateP = (progress - 0.70) / 0.15;
-            const fadeOut = progress > 0.80 ? Math.max(0, 1 - (progress - 0.80) * 10) : 1;
+        // ========== SCREEN 5: DATE ROW SPECIAL HIGHLIGHT (0.55 - 0.68) ==========
+        else if (progress >= 0.55 && progress < 0.68) {
+            const p = (progress - 0.55) / 0.13;
+            const fade = smoothFade(p, 0.2, 0.8);
 
-            // Special rainbow highlight on first row (the date)
+            // Draw grid
+            drawGrid(ctx, fade);
+
+            // Rainbow gradient on first row
             ctx.save();
-            ctx.globalAlpha = 0.3 * fadeOut;
+            ctx.globalAlpha = fade * 0.35;
             const gradient = ctx.createLinearGradient(startX, 0, startX + gridSize, 0);
-            gradient.addColorStop(0, '#ff0000');
-            gradient.addColorStop(0.25, '#ffff00');
-            gradient.addColorStop(0.5, '#00ff00');
-            gradient.addColorStop(0.75, '#00ffff');
-            gradient.addColorStop(1, '#ff00ff');
+            gradient.addColorStop(0, '#ff6b6b');
+            gradient.addColorStop(0.33, '#ffe66d');
+            gradient.addColorStop(0.66, '#4ecdc4');
+            gradient.addColorStop(1, '#a855f7');
             ctx.fillStyle = gradient;
             ctx.fillRect(startX, startY, gridSize, cellSize);
             ctx.restore();
 
-            // Redraw date row with special effects
+            // Draw date row with rainbow colors
+            const dateColors = ['#ff6b6b', '#ffe66d', '#4ecdc4', '#a855f7'];
             for (let ci = 0; ci < 4; ci++) {
-                drawCell(0, ci, fadeOut, true);
+                drawCell(0, ci, fade, dateColors[ci], true);
             }
 
-            // Show "Your Special Date!" text
+            // Draw other rows dimmed
+            for (let ri = 1; ri < 4; ri++) {
+                for (let ci = 0; ci < 4; ci++) {
+                    drawCell(ri, ci, fade * 0.35, null, false);
+                }
+            }
+
+            // Title
             ctx.save();
-            ctx.globalAlpha = dateP * fadeOut;
+            ctx.globalAlpha = fade;
             ctx.fillStyle = highlightColor;
             ctx.textAlign = 'center';
-            ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
-            ctx.fillText('✨ Your Special Date! ✨', startX + gridSize / 2, startY - 30);
-            
-            // Show date labels below first row
-            ctx.font = `${cellSize * 0.18}px 'Poppins', sans-serif`;
-            ctx.fillStyle = highlightColor;
-            const labels = ['Day', 'Month', 'Century', 'Year'];
-            const values = [DD, MM, CC, YY];
-            for (let i = 0; i < 4; i++) {
-                const x = startX + i * cellSize + cellSize / 2;
-                ctx.fillText(labels[i], x, startY + cellSize + 25);
-                ctx.fillText(`(${values[i]})`, x, startY + cellSize + 45);
-            }
+            ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
+            ctx.shadowColor = highlightColor;
+            ctx.shadowBlur = 15;
+            ctx.fillText('✨ Your Special Date! ✨', startX + gridSize / 2, startY - 40);
             ctx.restore();
+
+            // Show sum
+            drawSum(`= ${magicConstant}`, startX + gridSize + 55, startY + cellSize / 2, fade);
         }
 
-        // --- STAGE 4: IMAGE & MESSAGE (0.85 - 1.0) ---
-        if (progress > 0.80) {
-            const finalP = Math.min(1, (progress - 0.80) / 0.20);
+        // ========== SCREEN 6: FINAL GREETING (0.68 - 1.00) ==========
+        else if (progress >= 0.68) {
+            const p = (progress - 0.68) / 0.32;
+            const fade = Math.min(1, p / 0.15);
 
+            // Background image with gradient overlay
             if (imgRef.current && imgRef.current.complete) {
                 ctx.save();
-                ctx.globalAlpha = finalP;
+                ctx.globalAlpha = fade;
                 ctx.drawImage(imgRef.current, 0, 0, size, size);
-                const grad = ctx.createLinearGradient(0, size / 2, 0, size);
+                const grad = ctx.createLinearGradient(0, size * 0.3, 0, size);
                 grad.addColorStop(0, 'rgba(0,0,0,0)');
-                grad.addColorStop(0.8, 'rgba(0,0,0,0.8)');
+                grad.addColorStop(0.6, 'rgba(0,0,0,0.7)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.9)');
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, size, size);
                 ctx.restore();
             }
 
             ctx.save();
-            ctx.globalAlpha = Math.min(1, finalP * 1.5);
-            ctx.translate(0, (1 - finalP) * 30);
-
-            ctx.fillStyle = '#fff';
+            ctx.globalAlpha = fade;
             ctx.textAlign = 'center';
-            ctx.font = `bold ${size * 0.09}px 'Dancing Script', cursive`;
-            ctx.fillText(`Happy ${wishData?.occasion?.charAt(0).toUpperCase() + wishData?.occasion?.slice(1) || 'Celebration'}!`, size / 2, size * 0.55);
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 8;
 
-            ctx.font = `italic ${size * 0.04}px 'Playfair Display', serif`;
+            // Main greeting
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${size * 0.095}px 'Dancing Script', cursive`;
+            const displayOccasion = wishData?.occasion === 'other'
+                ? wishData?.customOccasion || 'Celebration'
+                : wishData?.occasion || 'Celebration';
+            ctx.fillText(`Happy ${displayOccasion.charAt(0).toUpperCase() + displayOccasion.slice(1)}!`, size / 2, size * 0.48);
+
+            // Message
+            ctx.font = `italic ${size * 0.042}px 'Playfair Display', serif`;
             const lines = (wishData?.message || 'A special wish for you').split('\n');
             lines.forEach((line, i) => {
-                ctx.fillText(line, size / 2, size * 0.65 + i * 50);
+                ctx.fillText(line, size / 2, size * 0.58 + i * 42);
             });
 
+            // Recipient
             ctx.fillStyle = highlightColor;
-            ctx.font = `bold ${size * 0.03}px 'Poppins', sans-serif`;
-            ctx.fillText(`To: ${wishData?.recipientName || 'Someone Special'}`, size / 2, size * 0.82);
+            ctx.font = `bold ${size * 0.038}px 'Poppins', sans-serif`;
+            ctx.fillText(`To: ${wishData?.recipientName || 'Someone Special'}`, size / 2, size * 0.76);
 
+            // Sender
             if (wishData?.senderName) {
-                ctx.font = `italic ${size * 0.025}px 'Poppins', sans-serif`;
-                ctx.fillText(`By: ${wishData.senderName}`, size / 2, size * 0.88);
+                ctx.fillStyle = '#fff';
+                ctx.font = `italic ${size * 0.03}px 'Poppins', sans-serif`;
+                ctx.fillText(`— From ${wishData.senderName}`, size / 2, size * 0.83);
             }
 
-            // Show the special date
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${size * 0.028}px 'Poppins', sans-serif`;
-            ctx.fillText(`Special Date: ${wishData?.date || dateStr}`, size / 2, size * 0.93);
-            
-            // Add watermark
-            ctx.save();
-            ctx.globalAlpha = 0.6;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.font = `${size * 0.02}px 'Poppins', sans-serif`;
+            // Date
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.font = `${size * 0.026}px 'Poppins', sans-serif`;
+            ctx.fillText(`Special Date: ${wishData?.date || dateStr}`, size / 2, size * 0.89);
+
+            // Watermark
+            ctx.globalAlpha = 0.4;
+            ctx.font = `${size * 0.016}px 'Poppins', sans-serif`;
             ctx.textAlign = 'right';
-            ctx.fillText('Created with RamanujanWishes.com', size - 20, size - 15);
-            ctx.restore();
+            ctx.fillText('wishyfi.com', size - 12, size - 10);
+
             ctx.restore();
 
-            // Floating Emoji Particles
-            ctx.save();
-            const seed = (wishData?.recipientName?.length || 5) + (wishData?.date?.length || 10);
-            const particleCount = 15;
-            for (let i = 0; i < particleCount; i++) {
-                const pSeed = seed + i;
-                const xBase = ((Math.sin(pSeed * 1.5) + 1) / 2) * size;
-                const yBase = ((Math.cos(pSeed * 2.1) + 1) / 2) * size;
-                const offsetX = Math.sin(progress * 4 + pSeed) * 50;
-                const offsetY = -(progress - 0.7) * 200 + Math.cos(progress * 3 + pSeed) * 30;
-                const x = xBase + offsetX;
-                const y = yBase + offsetY;
-                const opacity = Math.min(0.6, finalP * 0.8) * Math.max(0, 1 - (progress - 0.9) * 10);
-
-                ctx.globalAlpha = opacity;
-                ctx.font = `${size * 0.04}px serif`;
-                const emojis = (wishData?.occasion === 'birthday') ? ['🎂', '🎈', '✨', '🎁'] :
-                    (wishData?.occasion === 'anniversary') ? ['❤️', '💕', '🌹', '✨'] :
-                        (wishData?.occasion === 'wedding') ? ['💍', '🥂', '🌸', '✨'] :
-                            ['✨', '💖', '⭐', '🎈'];
-                const emoji = emojis[pSeed % emojis.length];
-                ctx.fillText(emoji, x, y);
+            // Emoji particles
+            if (fade > 0.3) {
+                ctx.save();
+                const seed = (wishData?.recipientName?.length || 5) + (wishData?.date?.length || 10);
+                for (let i = 0; i < 15; i++) {
+                    const ps = seed + i;
+                    const x = ((Math.sin(ps * 1.5) + 1) / 2) * size + Math.sin(progress * 3 + ps) * 40;
+                    const y = ((Math.cos(ps * 2.1) + 1) / 2) * size - (p * 100) + Math.cos(progress * 2.5 + ps) * 30;
+                    ctx.globalAlpha = Math.min(0.6, fade * 0.7) * Math.max(0, 1 - (p - 0.85) * 6);
+                    ctx.font = `${size * 0.04}px serif`;
+                    const emojis = ['✨', '💖', '⭐', '🎈', '🎊'];
+                    ctx.fillText(emojis[ps % emojis.length], x, y);
+                }
+                ctx.restore();
             }
-            ctx.restore();
-
-            // Magical Glitter
-            ctx.save();
-            ctx.globalAlpha = finalP * 0.5;
-            for (let i = 0; i < 40; i++) {
-                const s = seed * i;
-                const gx = ((Math.sin(s * 0.8) + 1) / 2) * size;
-                const gy = ((Math.cos(s * 1.2) + 1) / 2) * size;
-                const gOpacity = (Math.sin(progress * 10 + s) + 1) / 2;
-                ctx.fillStyle = highlightColor;
-                ctx.beginPath();
-                ctx.arc(gx, gy, 1.5 * gOpacity, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
         }
 
-        // Interactive Aura & Confetti & Crackers
+        // Interactive effects
         renderInteractions(ctx, size, mousePos, auraRef, confettiRef, crackersRef, progress);
 
     }, [square, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData, mousePos]);
@@ -803,6 +867,10 @@ const MagicSquareAnimation = () => {
 
                 </div>
             </div>
+
+            <footer className="site-footer">
+                <a href="http://wishyfi.com/" target="_blank" rel="noopener noreferrer">wishyfi.com</a>
+            </footer>
         </div>
     );
 };
