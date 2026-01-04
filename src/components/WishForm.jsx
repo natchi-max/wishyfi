@@ -186,7 +186,7 @@ const WishForm = () => {
 
                     {/* Animation Style Selection */}
                     <div className="form-group">
-                        <label>🎬 Animation Style</label>
+                        <label>Animation Style</label>
                         <div className="animation-style-selector">
                             <div 
                                 className={`style-option ${formData.animationStyle === 'digital' ? 'active' : ''}`}
@@ -201,8 +201,8 @@ const WishForm = () => {
                                     </div>
                                 </div>
                                 <div className="style-info">
-                                    <h4>Digital Greeting</h4>
-                                    <p>8-screen reveal with dramatic highlights</p>
+                                    <h4>Clean Reveal</h4>
+                                    <p>Simple 8-step pattern reveal</p>
                                     <span className="style-badge new">NEW</span>
                                 </div>
                             </div>
@@ -217,9 +217,9 @@ const WishForm = () => {
                                     </div>
                                 </div>
                                 <div className="style-info">
-                                    <h4>Classic Magic</h4>
-                                    <p>Traditional square animation with message</p>
-                                    <span className="style-badge">ORIGINAL</span>
+                                    <h4>Magic Square</h4>
+                                    <p>Traditional animation with effects</p>
+                                    <span className="style-badge">CLASSIC</span>
                                 </div>
                             </div>
                         </div>

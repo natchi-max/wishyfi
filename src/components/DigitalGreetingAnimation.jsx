@@ -57,24 +57,24 @@ const DigitalGreetingAnimation = () => {
     const startX = padding;
     const startY = padding;
 
-    // Color palette for highlights
+    // Color palette - muted colors for white theme
     const colors = {
-        primary: wishData.colorHighlight || '#667eea',
-        row1: '#ff6b6b',
-        row2: '#4ecdc4', 
-        row3: '#a855f7',
-        row4: '#ffe66d',
-        col1: '#ff9f43',
-        col2: '#10ac84',
-        col3: '#ee5a52',
-        col4: '#0abde3'
+        primary: wishData.colorHighlight || '#4a5568',
+        row1: '#e53e3e',
+        row2: '#38a169', 
+        row3: '#805ad5',
+        row4: '#d69e2e',
+        col1: '#dd6b20',
+        col2: '#319795',
+        col3: '#e53e3e',
+        col4: '#3182ce'
     };
 
     const renderFrame = useCallback((ctx, frame, totalFrames) => {
         const progress = frame / totalFrames;
         
-        // Clear canvas
-        ctx.fillStyle = '#0a0e27';
+        // Clear canvas with white background
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, size, size);
 
         // Helper functions
@@ -93,7 +93,7 @@ const DigitalGreetingAnimation = () => {
             ctx.restore();
         };
 
-        const drawCell = (row, col, alpha, color = '#fff', highlight = false) => {
+        const drawCell = (row, col, alpha, color = '#000', highlight = false) => {
             const x = startX + col * cellSize + cellSize / 2;
             const y = startY + row * cellSize + cellSize / 2;
             const value = square[row][col];
@@ -117,7 +117,7 @@ const DigitalGreetingAnimation = () => {
         const drawGrid = (alpha) => {
             ctx.save();
             ctx.globalAlpha = alpha;
-            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
             ctx.lineWidth = 1;
             
             for (let i = 0; i <= 4; i++) {
@@ -136,7 +136,7 @@ const DigitalGreetingAnimation = () => {
 
         const drawHighlight = (type, index, color, alpha) => {
             ctx.save();
-            ctx.globalAlpha = alpha * 0.3;
+            ctx.globalAlpha = alpha * 0.2;
             ctx.fillStyle = color;
             
             if (type === 'row') {
@@ -153,11 +153,10 @@ const DigitalGreetingAnimation = () => {
 
         // Enhanced date reveal positions
         const dateReveals = [
-            { type: 'row', index: 0, label: 'First Row - Your Special Date', color: colors.row1 },
-            { type: 'col', index: 0, label: 'First Column - Same Date!', color: colors.col1 },
-            { type: 'row', index: 3, label: 'Last Row - Date Reversed!', color: colors.row4 },
-            { type: 'col', index: 3, label: 'Last Column - Date Again!', color: colors.col4 },
-            { type: 'diagonal', index: 0, label: 'Main Diagonal - Date Pattern!', color: colors.primary }
+            { type: 'row', index: 0, label: 'Row 1', color: colors.row1 },
+            { type: 'col', index: 0, label: 'Column 1', color: colors.col1 },
+            { type: 'row', index: 3, label: 'Row 4', color: colors.row4 },
+            { type: 'col', index: 3, label: 'Column 4', color: colors.col4 }
         ];
 
         // Check if date components appear in specific positions
@@ -186,25 +185,17 @@ const DigitalGreetingAnimation = () => {
                 const fadeIn = Math.min(1, screenProgress * 3);
                 drawText(
                     `Hi ${wishData.recipientName}`,
-                    size / 2, size / 2 - 60,
-                    `bold ${size * 0.08}px 'Playfair Display'`,
-                    colors.primary,
-                    fadeIn,
-                    true
+                    size / 2, size / 2 - 40,
+                    `bold ${size * 0.06}px 'Poppins'`,
+                    '#333',
+                    fadeIn
                 );
                 drawText(
-                    'This is not random',
-                    size / 2, size / 2,
-                    `italic ${size * 0.05}px 'Playfair Display'`,
-                    '#fff',
-                    fadeIn * 0.8
-                );
-                drawText(
-                    'Watch closely',
-                    size / 2, size / 2 + 60,
+                    'Watch the pattern',
+                    size / 2, size / 2 + 20,
                     `${size * 0.04}px 'Poppins'`,
-                    colors.primary,
-                    fadeIn * 0.6
+                    '#666',
+                    fadeIn * 0.8
                 );
                 break;
 
@@ -228,7 +219,7 @@ const DigitalGreetingAnimation = () => {
                     for (let c = 0; c < 4; c++) {
                         const isHighlighted = r === reveal1.index;
                         const isDateCell = isDatePosition(r, c);
-                        drawCell(r, c, 1, isHighlighted ? reveal1.color : (isDateCell ? colors.primary : '#fff'), isHighlighted);
+                        drawCell(r, c, 1, isHighlighted ? reveal1.color : '#000', isHighlighted);
                     }
                 }
                 
@@ -263,7 +254,7 @@ const DigitalGreetingAnimation = () => {
                     for (let c = 0; c < 4; c++) {
                         const isHighlighted = c === reveal2.index;
                         const isDateCell = isDatePosition(r, c);
-                        drawCell(r, c, 1, isHighlighted ? reveal2.color : (isDateCell ? colors.primary : '#fff'), isHighlighted);
+                        drawCell(r, c, 1, isHighlighted ? reveal2.color : '#000', isHighlighted);
                     }
                 }
                 
@@ -347,17 +338,17 @@ const DigitalGreetingAnimation = () => {
 
             case 7: // Screen 8: Final message with template
             default:
-                // Background template
+                // Background with light overlay
                 if (templateImage) {
                     ctx.save();
                     ctx.globalAlpha = Math.min(1, screenProgress * 2);
                     ctx.drawImage(templateImage, 0, 0, size, size);
                     
-                    // Dark overlay for text readability
+                    // Light overlay for text readability
                     const gradient = ctx.createLinearGradient(0, size * 0.3, 0, size);
-                    gradient.addColorStop(0, 'rgba(0,0,0,0)');
-                    gradient.addColorStop(0.6, 'rgba(0,0,0,0.7)');
-                    gradient.addColorStop(1, 'rgba(0,0,0,0.9)');
+                    gradient.addColorStop(0, 'rgba(255,255,255,0)');
+                    gradient.addColorStop(0.6, 'rgba(255,255,255,0.8)');
+                    gradient.addColorStop(1, 'rgba(255,255,255,0.9)');
                     ctx.fillStyle = gradient;
                     ctx.fillRect(0, 0, size, size);
                     ctx.restore();
@@ -367,21 +358,20 @@ const DigitalGreetingAnimation = () => {
                 
                 // Main message
                 drawText(
-                    wishData.message || 'A special wish for you!',
+                    wishData.message || 'Special wishes for you',
                     size / 2, size * 0.5,
-                    `bold ${size * 0.06}px 'Dancing Script'`,
-                    '#fff',
-                    textAlpha,
-                    true
+                    `bold ${size * 0.05}px 'Poppins'`,
+                    '#333',
+                    textAlpha
                 );
                 
                 // Sender signature
                 if (wishData.senderName) {
                     drawText(
-                        `— From ${wishData.senderName}`,
-                        size / 2, size * 0.8,
-                        `italic ${size * 0.035}px 'Playfair Display'`,
-                        colors.primary,
+                        `From ${wishData.senderName}`,
+                        size / 2, size * 0.7,
+                        `${size * 0.03}px 'Poppins'`,
+                        '#666',
                         textAlpha * 0.8
                     );
                 }

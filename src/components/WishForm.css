@@ -597,7 +597,8 @@ textarea.error {
 }
 
 .digital-preview {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #f7fafc, #edf2f7);
+    border: 1px solid #e2e8f0;
 }
 
 .preview-grid {
@@ -609,13 +610,13 @@ textarea.error {
 }
 
 .preview-cell {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.1);
     border-radius: 2px;
     animation: digitalPulse 2s infinite;
 }
 
 .preview-cell.highlight {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.3);
     animation: digitalHighlight 1.5s infinite;
 }
 
