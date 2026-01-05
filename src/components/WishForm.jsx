@@ -17,7 +17,7 @@ const WishForm = () => {
         message: initialData?.message || '',
         colorHighlight: initialData?.colorHighlight || '#667eea',
         colorBg: initialData?.colorBg || '#ffffff',
-        animationStyle: initialData?.animationStyle || 'digital'
+        animationStyle: 'classic' // Default to classic animation
     });
 
     const [showDateDropdown, setShowDateDropdown] = useState(false);
@@ -94,8 +94,7 @@ const WishForm = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (validateForm()) {
-            const route = formData.animationStyle === 'digital' ? '/digital' : '/animate';
-            navigate(route, { state: { wishData: formData } });
+            navigate('/animate', { state: { wishData: formData } });
         }
     };
 
@@ -182,47 +181,6 @@ const WishForm = () => {
                                 />
                             </div>
                         )}
-                    </div>
-
-                    {/* Animation Style Selection */}
-                    <div className="form-group">
-                        <label>Animation Style</label>
-                        <div className="animation-style-selector">
-                            <div 
-                                className={`style-option ${formData.animationStyle === 'digital' ? 'active' : ''}`}
-                                onClick={() => setFormData(prev => ({ ...prev, animationStyle: 'digital' }))}
-                            >
-                                <div className="style-preview digital-preview">
-                                    <div className="preview-grid">
-                                        <div className="preview-cell highlight"></div>
-                                        <div className="preview-cell"></div>
-                                        <div className="preview-cell"></div>
-                                        <div className="preview-cell"></div>
-                                    </div>
-                                </div>
-                                <div className="style-info">
-                                    <h4>Clean Reveal</h4>
-                                    <p>Simple 8-step pattern reveal</p>
-                                    <span className="style-badge new">NEW</span>
-                                </div>
-                            </div>
-                            
-                            <div 
-                                className={`style-option ${formData.animationStyle === 'classic' ? 'active' : ''}`}
-                                onClick={() => setFormData(prev => ({ ...prev, animationStyle: 'classic' }))}
-                            >
-                                <div className="style-preview classic-preview">
-                                    <div className="preview-square">
-                                        <div className="preview-sparkle">✨</div>
-                                    </div>
-                                </div>
-                                <div className="style-info">
-                                    <h4>Magic Square</h4>
-                                    <p>Traditional animation with effects</p>
-                                    <span className="style-badge">CLASSIC</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Recipient Name */}
@@ -439,10 +397,6 @@ const WishForm = () => {
                     </button>
                 </form>
             </div>
-
-            <footer className="site-footer">
-                <a href="http://wishyfi.com/" target="_blank" rel="noopener noreferrer">wishyfi.com</a>
-            </footer>
         </div>
     );
 };

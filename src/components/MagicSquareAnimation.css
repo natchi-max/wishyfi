@@ -96,7 +96,8 @@ canvas {
     }
 
     /* Mobile text improvements */
-    h2, h3 {
+    h2,
+    h3 {
         font-weight: 800;
         color: var(--text-primary);
     }
@@ -117,18 +118,189 @@ canvas {
 
 /* Share Section */
 .share-section {
-    padding-top: var(--spacing-lg);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+    max-width: 500px;
+    margin: var(--spacing-lg) auto 0;
+    padding: var(--spacing-lg);
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Primary Actions - Always Visible */
+.primary-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.primary-actions .btn {
+    min-width: 120px;
+}
+
+/* Share Options Title */
+.share-options-title {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Expanded Share Options */
+.share-options-expanded {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.3s ease-out;
 }
 
 .share-label {
     color: var(--text-primary);
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.3rem;
+    font-weight: 700;
     margin-bottom: var(--spacing-md);
+    text-align: center;
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
+.share-link-container {
+    width: 100%;
+    margin-bottom: var(--spacing-md);
+}
+
+.share-link-display {
+    width: 100%;
+    padding: 18px;
+    color: var(--text-primary);
+    background: rgba(248, 250, 252, 0.95);
+    font-size: 0.85rem;
+    font-family: 'Monaco', 'Consolas', monospace;
+    text-decoration: none;
+    word-break: break-all;
+    white-space: normal;
+    transition: all 0.3s ease;
+    display: block;
+    text-align: center;
+    line-height: 1.6;
+    font-weight: 600;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.share-link-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+}
+
+.share-link-btn {
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+    font-family: 'Inter', sans-serif;
+    min-height: 48px;
+    text-align: center;
+}
+
+.share-link-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: var(--accent-purple);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.share-link-btn:active {
+    transform: translateY(0);
+}
+
+/* Platform-Specific Styles */
+.share-whatsapp-btn {
+    background: #25D366;
+    border-color: #25D366;
+    color: white;
+}
+
+.share-whatsapp-btn:hover {
+    background: #20bd5a;
+    border-color: #20bd5a;
+    transform: translateY(-2px);
+}
+
+/* Download GIF Button - High visibility */
+.share-download-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: 2px solid #667eea !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.share-download-btn:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+    border-color: #764ba2 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.share-download-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%) !important;
+    border-color: #9ca3af !important;
+}
+
+/* GIF Ready Section */
+.gif-ready-section {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Copy Success Message */
+.copy-success {
+    color: #059669;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-top: var(--spacing-md);
+    text-align: center;
+    animation: fadeIn 0.3s ease-out;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Helper Text */
+.share-section .helper-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+    opacity: 0.85;
+    margin-top: var(--spacing-md);
+    line-height: 1.5;
+}
+
+/* Legacy styles for compatibility */
 .share-buttons {
     display: flex;
     gap: var(--spacing-sm);
@@ -203,17 +375,7 @@ canvas {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Copy Success */
-.copy-success {
-    color: #059669;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-top: var(--spacing-sm);
-    animation: fadeIn 0.3s ease-out;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-}
-
-/* Share Link Box - Smaller & Elegant */
+/* Share Link Box - Legacy */
 .share-link-box {
     display: flex;
     max-width: 400px;
@@ -225,66 +387,6 @@ canvas {
     background: rgba(255, 255, 255, 0.9);
     transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
-}
-
-.share-link-display {
-    flex: 1;
-    padding: 15px;
-    color: var(--text-primary);
-    background: rgba(248, 250, 252, 0.95);
-    font-size: 0.8rem;
-    font-family: 'Monaco', 'Consolas', monospace;
-    text-decoration: none;
-    word-break: break-all;
-    white-space: normal;
-    transition: all 0.3s ease;
-    display: block;
-    text-align: center;
-    line-height: 1.4;
-    font-weight: 600;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: var(--radius-sm);
-}
-
-.share-link-actions {
-    display: flex;
-    gap: var(--spacing-sm);
-    justify-content: center;
-    margin-top: var(--spacing-sm);
-}
-
-.share-link-btn {
-    padding: 8px 14px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid rgba(0, 0, 0, 0.1);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    box-shadow: var(--shadow-sm);
-}
-
-.share-link-btn:hover {
-    background: rgba(255, 255, 255, 1);
-    border-color: var(--accent-purple);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.share-whatsapp-btn {
-    background: #25D366;
-    border-color: #25D366;
-}
-
-.share-whatsapp-btn:hover {
-    background: #20bd5a;
-    border-color: #20bd5a;
 }
 
 .cinematic-border {
@@ -384,12 +486,31 @@ canvas {
         margin: 0;
     }
 
-    .share-link-actions {
+    /* Primary Actions Mobile */
+    .primary-actions {
         flex-direction: column;
-        gap: var(--spacing-sm);
         width: 100%;
-        max-width: 400px;
-        margin: var(--spacing-md) auto 0;
+    }
+
+    .primary-actions .btn {
+        width: 100%;
+        min-width: auto;
+    }
+
+    /* Share Section Mobile Styles */
+    .share-section {
+        padding: var(--spacing-md);
+        margin-top: var(--spacing-md);
+    }
+
+    .share-options-expanded {
+        margin-top: var(--spacing-sm);
+        padding-top: var(--spacing-sm);
+    }
+
+    .share-link-actions {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
     }
 
     .share-link-btn {
@@ -397,11 +518,11 @@ canvas {
         justify-content: center;
         padding: 14px;
         font-size: 0.95rem;
+        font-weight: 700;
     }
 
-    .share-link-display {
-        font-size: 0.8rem;
-        padding: 15px;
+    .copy-success {
+        font-size: 0.9rem;
     }
 }
 
@@ -475,6 +596,7 @@ canvas {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -539,6 +661,7 @@ canvas {
         font-weight: 700;
     }
 }
+
 .generating-content {
     display: flex;
     align-items: center;

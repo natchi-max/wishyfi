@@ -25,7 +25,7 @@ const SharedWish = () => {
     );
   }
 
-  return <MagicSquareAnimation />;
+  return <MagicSquareAnimation wishData={wishData} />;
 };
 
 export default SharedWish;
