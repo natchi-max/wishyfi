@@ -7,7 +7,7 @@ import './WishForm.css';
 const WishForm = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const initialData = location.state?.wishData || null;
+    const initialData = location.state?.wishData || location.state?.sampleData || null;
 
     const [formData, setFormData] = useState({
         occasion: initialData?.occasion || 'birthday',

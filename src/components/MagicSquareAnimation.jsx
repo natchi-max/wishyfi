@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './MagicSquareAnimation.css';
 import { parseDateComponents, generateDateEchoSquare } from '../utils/magicSquare';
 import { createAnimatedGif, downloadBlob } from '../utils/gifGenerator';
+import { shareGifFile, downloadGifWithInstructions, showSharingInstructions, getShareSupport } from '../utils/shareUtils';
 import { LoadingSpinner, ProgressBar } from './LoadingComponents';
 import TinyColor from 'tinycolor2';
 
@@ -31,6 +32,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     const auraRef = useRef([]); // To store aura particles
     const crackersRef = useRef([]); // To store firework/crackers particles during square reveal
 
+    // GIF & sharing state
+    const [gifBlob, setGifBlob] = useState(null);
+    const [gifProgress, setGifProgress] = useState(0);
+    const [linkCopied, setLinkCopied] = useState(false);
+    const [shareSupport, setShareSupport] = useState(null);
+    const [isSharing, setIsSharing] = useState(false);
+
     // Redirect if no wish data
     useEffect(() => {
         if (!wishData && !isSharedView) {
@@ -46,6 +54,11 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             setShareableLink(link);
         }
     }, [wishData]);
+
+    // Check share support on mount
+    useEffect(() => {
+        setShareSupport(getShareSupport());
+    }, []);
 
     // Utility to encode wish data (Safe for UTF-8)
     function encodeWishData(data) {
@@ -806,11 +819,6 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         }, 800);
     };
 
-    const [gifBlob, setGifBlob] = useState(null);
-    const [copySuccess, setCopySuccess] = useState(false);
-    const [showShareOptions, setShowShareOptions] = useState(false);
-    const [linkCopied, setLinkCopied] = useState(false);
-    const [gifProgress, setGifProgress] = useState(0);
 
     // Generate proper animated GIF using gif.js
     const handleGenerateGif = async () => {
@@ -820,9 +828,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         try {
             console.log('Starting GIF generation...');
 
-            // Create animated GIF with proper frame capture - Slowed down for cinematic feel
-            const gifFrames = 240; // Increased frame count for smoother/slower progression
-            const frameDelay = 100; // Increased delay (100ms = 10fps) for better readability
+            // Optimized GIF settings for speed without losing magic feel
+            const gifFrames = 100; // Reduced from 240 for 2.4x speedup
+            const frameDelay = 120; // Slightly slower frame rate (8fps) but feels premium
 
             console.log(`Generating ${gifFrames} frames with ${frameDelay}ms delay`);
 
@@ -845,28 +853,15 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 const url = URL.createObjectURL(blob);
                 setGifUrl(url);
                 setIsFinished(true);
-
-                console.log('GIF blob created successfully, starting download...');
-
-                // Auto-download the GIF
-                const filename = `magic_wish_${wishData?.recipientName || 'special'}_${Date.now()}.gif`;
-                const success = downloadBlob(blob, filename);
-
-                if (!success) {
-                    console.log('Direct download failed, trying fallback...');
-                    // Fallback: open in new tab
-                    const newWindow = window.open(url, '_blank');
-                    if (!newWindow) {
-                        alert('GIF generated! Please allow popups to download, or use the download button below.');
-                    }
-                }
+                return blob;
             } else {
                 throw new Error('Generated GIF is empty or invalid');
             }
 
         } catch (error) {
-            console.error('GIF generation error:', error);
-            alert(`Could not generate GIF: ${error.message || 'Unknown error'}. Please try again.`);
+            console.error('GIF generation failed:', error);
+            alert('Failed to generate sharing GIF. Error: ' + error.message);
+            return null;
         } finally {
             setIsGenerating(false);
         }
@@ -897,49 +892,42 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         }
     };
 
-    // Native Share API (works with or without GIF)
-    const handleNativeShare = async () => {
-        const link = shareableLink || window.location.href;
+    // WhatsApp / Native Share API for GIF File + Link
+    const handleShareGif = async () => {
+        let currentBlob = gifBlob;
 
-        if (navigator.share) {
-            try {
-                // If GIF is available, try to share it
-                if (gifBlob) {
-                    const file = new File([gifBlob], `magic_wish_${wishData?.recipientName || 'special'}.gif`, { type: 'image/gif' });
-                    await navigator.share({
-                        title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
-                        text: `A special ${wishData?.occasion || 'celebration'} wish! ✨`,
-                        files: [file]
-                    });
-                } else {
-                    // Share link instead
-                    await navigator.share({
-                        title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
-                        text: `🎁 To: ${wishData?.recipientName || 'Someone Special'}${wishData?.senderName ? ` By: ${wishData.senderName}` : ''} | Magical ${wishData?.occasion || 'celebration'} ✨`,
-                        url: link
-                    });
-                }
-            } catch (err) {
-                console.log('Share cancelled or failed:', err);
+        if (!currentBlob) {
+            currentBlob = await handleGenerateGif();
+            if (!currentBlob) return;
+        }
+
+        setIsSharing(true);
+        try {
+            // Include link in the message if shareableLink is ready
+            const linkMessage = `✨ View my magical wish: ${shareableLink}`;
+
+            const shared = await shareGifFile(currentBlob, wishData, linkMessage);
+            if (!shared) {
+                downloadGifWithInstructions(currentBlob, wishData);
+                alert(`GIF Downloaded! \n\nTo share on WhatsApp: \n1. Open WhatsApp chat \n2. Attach Gallery image \n3. Paste link in caption: ${shareableLink}`);
             }
-        } else {
-            // Fallback: copy link
-            handleCopyLink();
-            alert('Link copied! You can now paste it anywhere to share.');
+        } catch (error) {
+            console.error('Share failed:', error);
+            if (currentBlob) downloadGifWithInstructions(currentBlob, wishData);
+        } finally {
+            setIsSharing(false);
         }
     };
 
     // Copy shareable link
     const handleCopyLink = async () => {
-        const link = shareableLink || window.location.href;
         try {
-            await navigator.clipboard.writeText(link);
+            await navigator.clipboard.writeText(shareableLink);
             setLinkCopied(true);
             setTimeout(() => setLinkCopied(false), 2000);
         } catch (e) {
-            // Fallback for older browsers
             const textArea = document.createElement('textarea');
-            textArea.value = link;
+            textArea.value = shareableLink;
             textArea.style.position = 'fixed';
             textArea.style.left = '-9999px';
             document.body.appendChild(textArea);
@@ -949,54 +937,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 setLinkCopied(true);
                 setTimeout(() => setLinkCopied(false), 2000);
             } catch (err) {
-                alert('Could not copy link. Please copy manually: ' + link);
+                alert('Could not copy link. Link: ' + shareableLink);
             }
             document.body.removeChild(textArea);
         }
     };
 
-    // WhatsApp Share with link
-    const handleWhatsAppShare = () => {
-        const link = shareableLink || window.location.href;
-        const message = `🎁 To: ${wishData?.recipientName || 'Someone Special'}${wishData?.senderName ? ` By: ${wishData.senderName}` : ''} | Magical ${wishData?.occasion || 'celebration'} ✨\n\nClick to view: ${link}`;
-        const encodedMessage = encodeURIComponent(message);
-        window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-    };
 
-    // Twitter/X Share with link
-    const handleTwitterShare = () => {
-        const link = shareableLink || window.location.href;
-        const text = `🎁 To: ${wishData?.recipientName || 'Someone Special'}${wishData?.senderName ? ` By: ${wishData.senderName}` : ''} | Magical ${wishData?.occasion || 'celebration'} ✨`;
-        const encodedText = encodeURIComponent(text);
-        const encodedUrl = encodeURIComponent(link);
-        window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
-    };
-
-    // Facebook Share with link
-    const handleFacebookShare = () => {
-        const link = shareableLink || window.location.href;
-        const encodedUrl = encodeURIComponent(link);
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
-    };
-
-    // Copy GIF to Clipboard (if available)
-    const handleCopyGif = async () => {
-        if (gifBlob) {
-            try {
-                await navigator.clipboard.write([
-                    new ClipboardItem({ 'image/gif': gifBlob })
-                ]);
-                setCopySuccess(true);
-                setTimeout(() => setCopySuccess(false), 2000);
-            } catch (err) {
-                // Fallback: copy link
-                handleCopyLink();
-            }
-        } else {
-            // No GIF yet, copy link instead
-            handleCopyLink();
-        }
-    };
 
     return (
         <div className="animation-page page">
@@ -1030,17 +977,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                     {/* --- SHARE SECTION (Always Visible - Not Shared View) --- */}
                     {!isSharedView && (
                         <div className="share-section fade-in">
-
-                            {/* Primary Action Buttons - Always Visible */}
                             <div className="primary-actions mb-md">
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={handleCopyLink}
-                                    title="Copy shareable link"
-                                >
-                                    {linkCopied ? '✓ Copied!' : '🔗 Copy Link'}
-                                </button>
-
                                 <button
                                     className="btn btn-secondary"
                                     onClick={handleBack}
@@ -1049,89 +986,49 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                 </button>
 
                                 <button
-                                    className="btn btn-primary"
-                                    onClick={() => setShowShareOptions(!showShareOptions)}
+                                    className="btn btn-secondary"
+                                    onClick={handleCopyLink}
                                 >
-                                    {showShareOptions ? '✕ Close' : '📤 Share'}
+                                    {linkCopied ? '✓ Copied!' : '🔗 Copy Link'}
                                 </button>
 
-                                {/* Download GIF Button - Moved here next to Share */}
                                 <button
                                     className="btn btn-primary"
-                                    onClick={handleGenerateGif}
-                                    disabled={isGenerating}
-                                    title="Download as animated GIF"
+                                    onClick={handleShareGif}
+                                    disabled={isGenerating || isSharing}
+                                    title="Share GIF + Link to WhatsApp, Telegram, etc."
                                 >
-                                    {isGenerating ? '⏳ Generating...' : '📥 Download GIF'}
+                                    {isGenerating ? '⏳ Creating GIF...' : isSharing ? '📤 Sharing...' : '📤 Share via Apps'}
                                 </button>
                             </div>
 
-                            {/* Progress Bar during GIF generation */}
-                            {isGenerating && gifProgress > 0 && (
+                            {/* Download button only after generation */}
+                            {gifBlob && !isGenerating && (
+                                <button onClick={handleDownloadGif} className="btn-link text-sm mb-md" style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', textDecoration: 'underline' }}>
+                                    📥 Download GIF instead
+                                </button>
+                            )}
+
+                            {/* Progress Bar */}
+                            {isGenerating && (
                                 <div className="mb-md">
-                                    <ProgressBar progress={gifProgress} label="Creating your GIF..." />
+                                    <ProgressBar progress={gifProgress} label="Creating your magical GIF..." />
                                 </div>
                             )}
 
-                            {/* GIF Ready - Show Preview & Download */}
-                            {isFinished && gifUrl && (
+                            {/* GIF Success Preview */}
+                            {gifBlob && gifUrl && (
                                 <div className="gif-ready-section mb-md fade-in">
-                                    <div className="gif-preview-box mb-sm">
+                                    <h4 className="text-center mb-sm">✨ Success! Your Magical GIF is Ready ✨</h4>
+                                    <div className="gif-preview-box mb-md">
                                         <img src={gifUrl} alt="Magic Gift" className="gif-preview" />
                                     </div>
-                                    <button onClick={handleDownloadGif} className="btn btn-primary">
-                                        📥 Download GIF Now
-                                    </button>
-                                </div>
-                            )}
 
-                            {/* Success Message */}
-                            {linkCopied && (
-                                <div className="copy-success mb-md">
-                                    ✓ Link copied to clipboard!
-                                </div>
-                            )}
-
-                            {/* Expanded Share Options - Show when Share button clicked */}
-                            {showShareOptions && (
-                                <div className="share-options-expanded fade-in">
-                                    <h4 className="share-options-title mb-sm">Share via</h4>
-
-                                    <div className="share-link-actions">
-                                        <button
-                                            className="share-link-btn share-whatsapp-btn"
-                                            onClick={handleWhatsAppShare}
-                                            title="Share on WhatsApp"
-                                        >
-                                            📱 WhatsApp
-                                        </button>
-
-                                        <button
-                                            className="share-link-btn"
-                                            onClick={handleTwitterShare}
-                                            title="Share on X (Twitter)"
-                                        >
-                                            🐦 X / Twitter
-                                        </button>
-
-                                        <button
-                                            className="share-link-btn"
-                                            onClick={handleFacebookShare}
-                                            title="Share on Facebook"
-                                        >
-                                            📘 Facebook
-                                        </button>
-
-                                        {navigator.share && (
-                                            <button
-                                                className="share-link-btn"
-                                                onClick={handleNativeShare}
-                                                title="Share via device options"
-                                            >
-                                                📤 More Apps
-                                            </button>
-                                        )}
-                                    </div>
+                                    <p className="share-info text-sm mt-sm">
+                                        {shareSupport?.isSupported
+                                            ? "✅ Your device supports direct file sharing!"
+                                            : "💡 Tap 'Share' to see available apps."}
+                                    </p>
                                 </div>
                             )}
                         </div>

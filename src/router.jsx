@@ -7,6 +7,7 @@ import DigitalGreetingAnimation from './components/DigitalGreetingAnimation';
 import CinematicXAnimation from './components/CinematicXAnimation';
 import RamanujanXAnimation from './components/RamanujanXAnimation';
 import SharedWish from './components/SharedWish';
+import ShareTest from './components/ShareTest';
 import NotFound from './components/NotFound';
 
 export const router = createBrowserRouter([
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: 'share/:shareId',
         element: <SharedWish />
+      },
+      {
+        path: 'test-share',
+        element: <ShareTest />
       },
       {
         path: '*',

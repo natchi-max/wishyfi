@@ -28,8 +28,8 @@ export async function createAnimatedGif(renderFrame, width, height, totalFrames,
             }
 
             const gif = new GIF({
-                workers: 2,
-                quality: 10, // Lower = better quality (1-30)
+                workers: 4, // Increased from 2 for better multi-core usage
+                quality: 15, // Slightly lower quality (1-30) for much faster processing
                 width,
                 height,
                 workerScript: '/gif.worker.js',
@@ -37,7 +37,7 @@ export async function createAnimatedGif(renderFrame, width, height, totalFrames,
                 transparent: null,
                 background: '#000000',
                 repeat: 0, // 0 = loop forever
-                dither: false // Disable dithering for better quality
+                dither: false // Disable dithering for better speed and style
             });
 
             let frameCount = 0;
