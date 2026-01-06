@@ -14,13 +14,15 @@ const WishForm = () => {
         customOccasion: initialData?.customOccasion || '',
         recipientName: initialData?.recipientName || '',
         senderName: initialData?.senderName || '',
-        date: initialData?.date || '',
+        date: initialData?.date || '', // Prefilled date is now stable
         message: initialData?.message || '',
         colorHighlight: initialData?.colorHighlight || '#667eea',
         colorBg: initialData?.colorBg || '#ffffff',
         selectedTheme: initialData?.selectedTheme || 'main',
         themeImage: initialData?.themeImage || null
     });
+
+    const [isDateMetaEdited, setIsDateMetaEdited] = useState(!!initialData?.date);
 
     const [showDateDropdown, setShowDateDropdown] = useState(false);
     const [errors, setErrors] = useState({});
@@ -114,7 +116,9 @@ const WishForm = () => {
     };
 
     const useTemplate = (occasion) => {
-        const template = getRandomTemplate(occasion);
+        const found = allOccasions.find(o => o.key === occasion);
+        const label = found ? found.label.replace(/[^\w\s]/gi, '').trim() : '';
+        const template = getRandomTemplate(occasion, label);
         if (template) {
             setFormData(prev => ({
                 ...prev,
@@ -141,6 +145,7 @@ const WishForm = () => {
             ...prev,
             date: value
         }));
+        setIsDateMetaEdited(true);
 
         if (errors.date) {
             setErrors(prev => ({
@@ -229,15 +234,19 @@ const WishForm = () => {
                             <div className="theme-selection">
                                 <div className="preview-label">🎨 Choose Theme & Background</div>
 
-                                {/* Theme Options - Only Occasion Image and Gradient */}
+                                {/* Theme Options - Strictly relevant to occasion */}
                                 <div className="theme-options-simple">
                                     {/* Main occasion image */}
                                     <div
                                         className={`theme-option-large ${formData.selectedTheme === 'main' || !formData.selectedTheme ? 'active' : ''}`}
-                                        onClick={() => setFormData(prev => ({ ...prev, selectedTheme: 'main', themeImage: `/images/festivals/${prev.occasion}.png` }))}
+                                        onClick={() => setFormData(prev => ({
+                                            ...prev,
+                                            selectedTheme: 'main',
+                                            themeImage: `/images/festivals/${prev.occasion}.png`
+                                        }))}
                                     >
                                         <img
-                                            src={`/images/festivals/${formData.occasion}.png`}
+                                            src={`/images/festivals/${formData.occasion === 'namingceremony' ? 'babyshower' : formData.occasion}.png`}
                                             alt={currentOccasionLabel}
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
@@ -245,11 +254,30 @@ const WishForm = () => {
                                             }}
                                         />
                                         <div className="theme-fallback-large">
-                                            <span className="fallback-emoji">🎉</span>
-                                            <span className="fallback-text">Theme Image</span>
+                                            <span className="fallback-emoji">✨</span>
+                                            <span className="fallback-text">Official Theme</span>
                                         </div>
-                                        <span className="theme-label-large">{currentOccasionLabel}</span>
+                                        <span className="theme-label-large">Classic {currentOccasionLabel}</span>
                                     </div>
+
+                                    {/* Sub-theme / Variation for specific occasions */}
+                                    {(formData.occasion === 'birthday' || formData.occasion === 'anniversary') && (
+                                        <div
+                                            className={`theme-option-large ${formData.selectedTheme === 'alternate' ? 'active' : ''}`}
+                                            onClick={() => setFormData(prev => ({
+                                                ...prev,
+                                                selectedTheme: 'alternate',
+                                                themeImage: `/images/festivals/${prev.occasion === 'birthday' ? 'party' : 'love'}.png`
+                                            }))}
+                                        >
+                                            <img
+                                                src={`/images/festivals/${formData.occasion === 'birthday' ? 'party' : 'love'}.png`}
+                                                alt="Variation"
+                                                onError={(e) => e.target.style.display = 'none'}
+                                            />
+                                            <span className="theme-label-large">Elegant Style</span>
+                                        </div>
+                                    )}
 
                                     {/* Gradient only option */}
                                     <div
@@ -258,7 +286,7 @@ const WishForm = () => {
                                         style={{ background: `linear-gradient(135deg, ${formData.colorBg}, ${formData.colorHighlight})` }}
                                     >
                                         <span className="gradient-icon-large">🌈</span>
-                                        <span className="theme-label-large">Custom Gradient</span>
+                                        <span className="theme-label-large">Minimalist Art</span>
                                     </div>
                                 </div>
 
@@ -336,7 +364,7 @@ const WishForm = () => {
                             name="recipientName"
                             value={formData.recipientName}
                             onChange={handleChange}
-                            placeholder="e.g., Sanjeev"
+                            placeholder="Recipient's Name"
                             className={errors.recipientName ? 'error' : ''}
                         />
                         {errors.recipientName && (
@@ -353,7 +381,7 @@ const WishForm = () => {
                             name="senderName"
                             value={formData.senderName}
                             onChange={handleChange}
-                            placeholder="e.g., Sanjeev"
+                            placeholder="Your Name"
                             className={errors.senderName ? 'error' : ''}
                         />
                         {errors.senderName && (

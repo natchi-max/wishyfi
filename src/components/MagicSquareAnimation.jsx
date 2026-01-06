@@ -150,9 +150,8 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         // Screen 1 (0.00 - 0.14): Introduction - "Hi [Name], This is not random, Watch closely"
         // Screen 2 (0.14 - 0.26): Magic Square Appearance - Full 4×4 grid
         // Screen 3 (0.26 - 0.42): Combined Pattern Reveal - Row/Column highlights with date reveal
-        // Screen 4 (0.42 - 0.56): Color Block Structure - Four 2×2 blocks with solid colors
-        // Screen 5 (0.56 - 0.70): Row Coloring - Each row gets unique color
-        // Screen 6 (0.70 - 0.82): Flash Emphasis - Rhythmic row flashing
+        // Screen 5 (0.56 - 0.70): Row Coloring - Each row gets unique color (Visual logic only)
+        // Screen 6 (0.70 - 0.82): Rhythmic Harmony - Each row pulses with magic
         // Screen 7 (0.82 - 1.00): Final Greeting - Template background with message
 
         // Clear & Background
@@ -243,7 +242,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 ctx.font = `bold ${size * 0.09}px 'Playfair Display', serif`;
                 ctx.shadowColor = highlightColor;
                 ctx.shadowBlur = 30;
-                ctx.fillText(`Hi ${wishData?.recipientName || 'Friend'}`, size / 2, size / 2 - 20);
+                ctx.fillText(`Hi ${wishData?.recipientName || 'there'}`, size / 2, size / 2 - 20);
             }
             // This is not random (33-66%)
             else if (p < 0.66) {
@@ -293,7 +292,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 ctx.font = `bold ${cellSize * 0.24}px 'Poppins', sans-serif`;
                 ctx.shadowColor = highlightColor;
                 ctx.shadowBlur = 15;
-                ctx.fillText('wishyfi.com', startX + gridSize / 2, startY - 35);
+                ctx.fillText('Wishyfi', startX + gridSize / 2, startY - 35);
                 ctx.restore();
             }
 
@@ -311,106 +310,85 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 3: X DIAGONAL COLOR ANIMATION (0.26 - 0.42) ═══════════════════
+        // ═══════════════════ SCREEN 3: X DIAGONAL 'XX' CONCEPT (0.26 - 0.42) ═══════════════════
         else if (progress >= 0.26 && progress < 0.42) {
             const p = (progress - 0.26) / 0.16;
             const fade = smoothFade(p, 0.1, 0.9);
 
             drawGrid(ctx, 1);
 
-            // Define diagonal cells
-            const mainDiag = [[0, 0], [1, 1], [2, 2], [3, 3]]; // Top-left to bottom-right
-            const antiDiag = [[0, 3], [1, 2], [2, 1], [3, 0]]; // Top-right to bottom-left
-            const allDiagCells = new Set([...mainDiag.map(c => `${c[0]},${c[1]}`), ...antiDiag.map(c => `${c[0]},${c[1]}`)]);
-
-            // Progress for cell reveal (each diagonal cell lights up in sequence)
-            const revealProgress = Math.min(1, p * 1.2);
-
-            // Draw colored backgrounds for diagonal cells (instead of stroke lines)
+            // Strong visual emphasis on 'XX' concept (Diagonals)
             ctx.save();
-            for (let i = 0; i < 4; i++) {
-                const cellDelay = i * 0.2;
-                const cellProgress = Math.max(0, Math.min(1, (revealProgress - cellDelay) / 0.3));
+            ctx.globalAlpha = fade * 0.4;
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
 
-                if (cellProgress > 0) {
-                    // Main diagonal cell background
-                    const [mr, mc] = mainDiag[i];
-                    ctx.globalAlpha = cellProgress * fade * 0.4;
-                    ctx.fillStyle = '#ff6b6b';
-                    ctx.shadowColor = '#ff6b6b';
-                    ctx.shadowBlur = 20;
-                    ctx.fillRect(startX + mc * cellSize, startY + mr * cellSize, cellSize, cellSize);
+            // Draw Big 'X' glowing lines
+            const drawGlowingLine = (x1, y1, x2, y2, color) => {
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+                ctx.restore();
+            };
 
-                    // Anti-diagonal cell background
-                    const [ar, ac] = antiDiag[i];
-                    ctx.fillStyle = '#4ecdc4';
-                    ctx.shadowColor = '#4ecdc4';
-                    ctx.fillRect(startX + ac * cellSize, startY + ar * cellSize, cellSize, cellSize);
-                }
+            const lineP = Math.min(1, p * 1.5);
+            if (lineP > 0) {
+                // Main diagonal line
+                drawGlowingLine(
+                    startX, startY,
+                    startX + gridSize * lineP, startY + gridSize * lineP,
+                    '#ff6b6b'
+                );
+                // Anti-diagonal line
+                drawGlowingLine(
+                    startX + gridSize, startY,
+                    startX + gridSize * (1 - lineP), startY + gridSize * lineP,
+                    '#4ecdc4'
+                );
             }
             ctx.restore();
 
-            // Draw cells with X highlighting
+            // Define diagonal cells for logic
+            const mainDiag = [[0, 0], [1, 1], [2, 2], [3, 3]];
+            const antiDiag = [[0, 3], [1, 2], [2, 1], [3, 0]];
+            const allDiagCells = new Set([...mainDiag.map(c => `${c[0]},${c[1]}`), ...antiDiag.map(c => `${c[0]},${c[1]}`)]);
+
+            // Draw cells with emphasis
             for (let ri = 0; ri < 4; ri++) {
                 for (let ci = 0; ci < 4; ci++) {
                     const isOnDiag = allDiagCells.has(`${ri},${ci}`);
                     const isMainDiag = ri === ci;
                     const isAntiDiag = ri + ci === 3;
 
-                    // Determine cell color
                     let cellColor = null;
                     if (isMainDiag && isAntiDiag) {
-                        cellColor = '#ffe66d'; // Intersection - yellow
+                        cellColor = '#ffe66d';
                     } else if (isMainDiag) {
-                        cellColor = '#ff6b6b'; // Main diagonal - red
+                        cellColor = '#ff6b6b';
                     } else if (isAntiDiag) {
-                        cellColor = '#4ecdc4'; // Anti-diagonal - teal
+                        cellColor = '#4ecdc4';
                     }
 
-                    const cellAlpha = isOnDiag ? fade : 0.3 * fade;
+                    const cellAlpha = isOnDiag ? fade : 0.25 * fade;
                     drawCell(ri, ci, cellAlpha, cellColor, isOnDiag);
                 }
             }
 
-            // Show X = Sum title
+            // Artistic Title (No technical text)
             ctx.save();
             ctx.globalAlpha = fade;
             ctx.textAlign = 'center';
-            ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
-
-            // Color based on progress
-            let titleColor;
-            if (p < 0.33) {
-                titleColor = '#ff6b6b';
-            } else if (p < 0.66) {
-                titleColor = '#4ecdc4';
-            } else {
-                titleColor = '#ffe66d';
-            }
-            ctx.fillStyle = titleColor;
-            ctx.shadowColor = titleColor;
-            ctx.shadowBlur = 20;
-
-            ctx.fillText(`Diagonals = ${magicConstant}`, startX + gridSize / 2, startY - 35);
+            ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 10;
+            ctx.fillText(`Mathematical Miracle`, startX + gridSize / 2, startY - 35);
             ctx.restore();
-
-            // Sparkle effects around the grid
-            if (fade > 0.3) {
-                ctx.save();
-                const sparkleCount = 8;
-                for (let i = 0; i < sparkleCount; i++) {
-                    const angle = (p + i / sparkleCount) * Math.PI * 2;
-                    const radius = gridSize * 0.55;
-                    const sx = startX + gridSize / 2 + Math.cos(angle) * radius;
-                    const sy = startY + gridSize / 2 + Math.sin(angle) * radius;
-                    const sparkleAlpha = fade * 0.6;
-
-                    ctx.globalAlpha = sparkleAlpha;
-                    ctx.font = `${cellSize * 0.25}px serif`;
-                    ctx.fillText('✨', sx, sy);
-                }
-                ctx.restore();
-            }
         }
 
         // ═══════════════════ SCREEN 4: COLOR BLOCK STRUCTURE (0.42 - 0.56) ═══════════════════
@@ -446,10 +424,10 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             if (p > 0.3) {
                 ctx.save();
                 ctx.globalAlpha = Math.min(1, (p - 0.3) / 0.3) * fade;
-                ctx.fillStyle = baseTextColor;
+                ctx.fillStyle = highlightColor;
                 ctx.textAlign = 'center';
-                ctx.font = `bold ${cellSize * 0.2}px 'Poppins', sans-serif`;
-                ctx.fillText('Four 2×2 Blocks', startX + gridSize / 2, startY - 35);
+                ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
+                ctx.fillText(`Sum = ${magicConstant}`, startX + gridSize / 2, startY - 35);
                 ctx.restore();
             }
         }
@@ -487,10 +465,10 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             if (p > 0.2) {
                 ctx.save();
                 ctx.globalAlpha = Math.min(1, (p - 0.2) / 0.3) * fade;
-                ctx.fillStyle = baseTextColor;
+                ctx.fillStyle = highlightColor;
                 ctx.textAlign = 'center';
-                ctx.font = `bold ${cellSize * 0.2}px 'Poppins', sans-serif`;
-                ctx.fillText('Each Row = Unique Color', startX + gridSize / 2, startY - 35);
+                ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
+                ctx.fillText(`Perfect Balance`, startX + gridSize / 2, startY - 35);
                 ctx.restore();
             }
         }
@@ -828,9 +806,10 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         try {
             console.log('Starting GIF generation...');
 
-            // Optimized GIF settings for speed without losing magic feel
-            const gifFrames = 100; // Reduced from 240 for 2.4x speedup
-            const frameDelay = 120; // Slightly slower frame rate (8fps) but feels premium
+            // Slowed down GIF settings for a more cinematic and readable experience
+            // 150 frames at 200ms = 30 seconds (matches the on-screen animation closely)
+            const gifFrames = 150;
+            const frameDelay = 200;
 
             console.log(`Generating ${gifFrames} frames with ${frameDelay}ms delay`);
 

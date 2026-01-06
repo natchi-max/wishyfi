@@ -27,7 +27,7 @@ const LandingPage = () => {
             state: {
                 sampleData: {
                     date: '14/07/2000',
-                    recipientName: 'Ananya',
+                    recipientName: 'Alex',
                     occasion: 'birthday'
                 }
             }
@@ -100,16 +100,11 @@ const LandingPage = () => {
                                     <span>Birthday · 07 · 14 · 2026</span>
                                 </div>
                                 <div className="preview-grid-box">
-                                    <p className="grid-label">For Ananya</p>
+                                    <p className="grid-label">For Alex</p>
                                     <div className="grid-display">
-                                        <div className="grid-cell">0</div>
-                                        <div className="grid-cell">7</div>
-                                        <div className="grid-cell">1</div>
-                                        <div className="grid-cell">4</div>
-                                        <div className="grid-cell">2</div>
-                                        <div className="grid-cell">0</div>
-                                        <div className="grid-cell">2</div>
-                                        <div className="grid-cell">6</div>
+                                        {[30, 3, 20, 7, 8, 19, 0, 33, 1, 32, 9, 18, 21, 6, 31, 2].map((num, i) => (
+                                            <div key={i} className="grid-cell">{num < 10 ? `0${num}` : num}</div>
+                                        ))}
                                     </div>
                                     <p className="grid-message">
                                         Every number in this grid is from the day you were born.
@@ -195,14 +190,9 @@ const LandingPage = () => {
                                         </p>
                                     </div>
                                     <div className="mini-grid">
-                                        <div className="mini-grid-cell">0</div>
-                                        <div className="mini-grid-cell">1</div>
-                                        <div className="mini-grid-cell">0</div>
-                                        <div className="mini-grid-cell">5</div>
-                                        <div className="mini-grid-cell">2</div>
-                                        <div className="mini-grid-cell">0</div>
-                                        <div className="mini-grid-cell">2</div>
-                                        <div className="mini-grid-cell">6</div>
+                                        {[14, 7, 20, 0, 1, 19, 11, 9, 10, 8, 13, 11, 17, 12, 4, 11].map((num, i) => (
+                                            <div key={i} className="mini-grid-cell">{num < 10 ? `0${num}` : num}</div>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
