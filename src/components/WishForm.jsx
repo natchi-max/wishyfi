@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { wishTemplates, getRandomTemplate } from '../utils/templates';
+import { OCCASION_CATEGORIES } from '../utils/imageGenerator';
 import './WishForm.css';
 
 const WishForm = () => {
@@ -17,33 +18,43 @@ const WishForm = () => {
         message: initialData?.message || '',
         colorHighlight: initialData?.colorHighlight || '#667eea',
         colorBg: initialData?.colorBg || '#ffffff',
-        animationStyle: 'classic' // Default to classic animation
+        selectedTheme: initialData?.selectedTheme || 'main',
+        themeImage: initialData?.themeImage || null
     });
 
     const [showDateDropdown, setShowDateDropdown] = useState(false);
     const [errors, setErrors] = useState({});
+    const [occasionSearch, setOccasionSearch] = useState('');
+    const [showOccasionDropdown, setShowOccasionDropdown] = useState(false);
 
-    const occasions = [
-        { value: 'birthday', label: '🎂 Birthday', emoji: '🎂' },
-        { value: 'anniversary', label: '💑 Anniversary', emoji: '💑' },
-        { value: 'love', label: '❤️ Love', emoji: '❤️' },
-        { value: 'wedding', label: '💍 Wedding', emoji: '💍' },
-        { value: 'newyear', label: '🎆 New Year', emoji: '🎆' },
-        { value: 'diwali', label: '🪔 Diwali', emoji: '🪔' },
-        { value: 'christmas', label: '🎄 Christmas', emoji: '🎄' },
-        { value: 'pongal', label: '🌾 Pongal', emoji: '🌾' },
-        { value: 'eid', label: '☪️ Eid', emoji: '☪️' },
-        { value: 'graduation', label: '🎓 Graduation', emoji: '🎓' },
-        { value: 'other', label: '✨ Other', emoji: '✨' }
-    ];
+    // Build flat list of all occasions for searching
+    const allOccasions = useMemo(() => {
+        const list = [];
+        for (const [category, items] of Object.entries(OCCASION_CATEGORIES)) {
+            items.forEach(item => {
+                list.push({ ...item, category });
+            });
+        }
+        list.push({ key: 'other', label: '✨ Other (Custom)', category: 'Custom' });
+        return list;
+    }, []);
 
-    const colorPresets = [
-        { name: 'Pure Elegance', highlight: '#667eea', bg: '#ffffff' },
-        { name: 'Classic Gold', highlight: '#d97706', bg: '#f8fafc' },
-        { name: 'Warm Rose', highlight: '#db2777', bg: '#fff0f5' },
-        { name: 'Mint Fresh', highlight: '#059669', bg: '#f0fdf4' },
-        { name: 'Royal White', highlight: '#7c3aed', bg: '#faf5ff' }
-    ];
+    // Filter occasions based on search
+    const filteredOccasions = useMemo(() => {
+        if (!occasionSearch.trim()) return allOccasions;
+        const search = occasionSearch.toLowerCase();
+        return allOccasions.filter(occ =>
+            occ.label.toLowerCase().includes(search) ||
+            occ.key.toLowerCase().includes(search) ||
+            occ.category.toLowerCase().includes(search)
+        );
+    }, [occasionSearch, allOccasions]);
+
+    // Get current occasion label
+    const currentOccasionLabel = useMemo(() => {
+        const found = allOccasions.find(o => o.key === formData.occasion);
+        return found ? found.label : 'Select Occasion';
+    }, [formData.occasion, allOccasions]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -51,7 +62,6 @@ const WishForm = () => {
             ...prev,
             [name]: value
         }));
-        // Clear error for this field
         if (errors[name]) {
             setErrors(prev => ({
                 ...prev,
@@ -74,10 +84,15 @@ const WishForm = () => {
         if (!formData.date) {
             newErrors.date = 'Please select a date';
         } else {
-            // Validate date format
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (!dateRegex.test(formData.date)) {
                 newErrors.date = 'Date must be in DD/MM/YYYY format';
+            } else {
+                const [d, m, y] = formData.date.split('/').map(Number);
+                const dt = new Date(y, m - 1, d);
+                if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) {
+                    newErrors.date = 'Please enter a valid real date';
+                }
             }
         }
 
@@ -103,8 +118,7 @@ const WishForm = () => {
         if (template) {
             setFormData(prev => ({
                 ...prev,
-                message: template.message,
-                colorHighlight: template.color
+                message: template.message
             }));
         }
     };
@@ -114,9 +128,8 @@ const WishForm = () => {
     };
 
     const handleDateInputChange = (e) => {
-        let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        let value = e.target.value.replace(/\D/g, '');
 
-        // Format as DD/MM/YYYY
         if (value.length >= 2) {
             value = value.slice(0, 2) + '/' + value.slice(2);
         }
@@ -137,6 +150,12 @@ const WishForm = () => {
         }
     };
 
+    const selectOccasion = (key) => {
+        setFormData(prev => ({ ...prev, occasion: key }));
+        setShowOccasionDropdown(false);
+        setOccasionSearch('');
+    };
+
     return (
         <div className="wish-form-page page">
             <div className="wish-form-container fade-in">
@@ -147,38 +166,163 @@ const WishForm = () => {
                 <div className="form-header text-center mb-xl">
                     <h2 className="text-gradient">Create Your Magical Wish</h2>
                     <p className="text-secondary">
-                        Fill in the details to generate a personalized Ramanujan magic square
+                        Fill in the details to create a personalized magical wish animation
                     </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="wish-form">
-                    {/* Occasion Selection - Dropdown */}
+                    {/* Occasion Selection with Search */}
                     <div className="form-group">
-                        <label htmlFor="occasion">🎉 Occasion</label>
-                        <select
-                            id="occasion"
-                            name="occasion"
-                            value={formData.occasion}
-                            onChange={(e) => setFormData(prev => ({ ...prev, occasion: e.target.value }))}
-                            className="form-select"
-                        >
-                            {occasions.map(occ => (
-                                <option key={occ.value} value={occ.value}>
-                                    {occ.label}
-                                </option>
-                            ))}
-                        </select>
+                        <label>🎉 Occasion</label>
+                        <div className="occasion-selector">
+                            <div
+                                className="occasion-selected"
+                                onClick={() => setShowOccasionDropdown(!showOccasionDropdown)}
+                            >
+                                <span>{currentOccasionLabel}</span>
+                                <span className="dropdown-arrow">{showOccasionDropdown ? '▲' : '▼'}</span>
+                            </div>
 
-                        {/* Custom Occasion Input */}
+                            {showOccasionDropdown && (
+                                <div className="occasion-dropdown">
+                                    <input
+                                        type="text"
+                                        className="occasion-search"
+                                        placeholder="🔍 Search occasions..."
+                                        value={occasionSearch}
+                                        onChange={(e) => setOccasionSearch(e.target.value)}
+                                        autoFocus
+                                    />
+                                    <div className="occasion-list">
+                                        {filteredOccasions.length === 0 ? (
+                                            <div className="occasion-no-results">No occasions found</div>
+                                        ) : (
+                                            filteredOccasions.map(occ => (
+                                                <div
+                                                    key={occ.key}
+                                                    className={`occasion-item ${formData.occasion === occ.key ? 'active' : ''}`}
+                                                    onClick={() => selectOccasion(occ.key)}
+                                                >
+                                                    <span className="occasion-label">{occ.label}</span>
+                                                    <span className="occasion-category">{occ.category}</span>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {formData.occasion === 'other' && (
                             <div className="custom-occasion-input">
                                 <input
                                     type="text"
-                                    placeholder="Enter custom occasion (e.g., Holi, Valentine's Day)"
+                                    placeholder="Describe your occasion..."
                                     value={formData.customOccasion}
                                     onChange={(e) => setFormData(prev => ({ ...prev, customOccasion: e.target.value }))}
                                     className="form-input"
                                 />
+                            </div>
+                        )}
+                        {/* Theme & Background Selection */}
+                        {formData.occasion && formData.occasion !== 'other' && (
+                            <div className="theme-selection">
+                                <div className="preview-label">🎨 Choose Theme & Background</div>
+
+                                {/* Theme Options - Only Occasion Image and Gradient */}
+                                <div className="theme-options-simple">
+                                    {/* Main occasion image */}
+                                    <div
+                                        className={`theme-option-large ${formData.selectedTheme === 'main' || !formData.selectedTheme ? 'active' : ''}`}
+                                        onClick={() => setFormData(prev => ({ ...prev, selectedTheme: 'main', themeImage: `/images/festivals/${prev.occasion}.png` }))}
+                                    >
+                                        <img
+                                            src={`/images/festivals/${formData.occasion}.png`}
+                                            alt={currentOccasionLabel}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                        <div className="theme-fallback-large">
+                                            <span className="fallback-emoji">🎉</span>
+                                            <span className="fallback-text">Theme Image</span>
+                                        </div>
+                                        <span className="theme-label-large">{currentOccasionLabel}</span>
+                                    </div>
+
+                                    {/* Gradient only option */}
+                                    <div
+                                        className={`theme-option-large gradient-option-large ${formData.selectedTheme === 'gradient' ? 'active' : ''}`}
+                                        onClick={() => setFormData(prev => ({ ...prev, selectedTheme: 'gradient', themeImage: null }))}
+                                        style={{ background: `linear-gradient(135deg, ${formData.colorBg}, ${formData.colorHighlight})` }}
+                                    >
+                                        <span className="gradient-icon-large">🌈</span>
+                                        <span className="theme-label-large">Custom Gradient</span>
+                                    </div>
+                                </div>
+
+                                {/* Background Color Options */}
+                                <div className="bg-color-section">
+                                    <div className="color-label">🎨 Background Color</div>
+                                    <div className="color-options">
+                                        {[
+                                            { name: 'White', color: '#ffffff' },
+                                            { name: 'Cream', color: '#fef9e7' },
+                                            { name: 'Pink', color: '#fff0f5' },
+                                            { name: 'Lavender', color: '#f3e8ff' },
+                                            { name: 'Sky', color: '#e0f2fe' },
+                                            { name: 'Mint', color: '#ecfdf5' },
+                                            { name: 'Dark', color: '#1a1a2e' }
+                                        ].map(opt => (
+                                            <div
+                                                key={opt.color}
+                                                className={`color-swatch ${formData.colorBg === opt.color ? 'active' : ''}`}
+                                                style={{ backgroundColor: opt.color }}
+                                                onClick={() => setFormData(prev => ({ ...prev, colorBg: opt.color }))}
+                                                title={opt.name}
+                                            />
+                                        ))}
+                                        <input
+                                            type="color"
+                                            value={formData.colorBg}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, colorBg: e.target.value }))}
+                                            className="color-picker-mini"
+                                            title="Custom Color"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Highlight Color Options */}
+                                <div className="bg-color-section">
+                                    <div className="color-label">✨ Accent Color</div>
+                                    <div className="color-options">
+                                        {[
+                                            { name: 'Purple', color: '#667eea' },
+                                            { name: 'Rose', color: '#ec4899' },
+                                            { name: 'Gold', color: '#f59e0b' },
+                                            { name: 'Emerald', color: '#10b981' },
+                                            { name: 'Blue', color: '#3b82f6' },
+                                            { name: 'Red', color: '#ef4444' },
+                                            { name: 'Teal', color: '#14b8a6' }
+                                        ].map(opt => (
+                                            <div
+                                                key={opt.color}
+                                                className={`color-swatch ${formData.colorHighlight === opt.color ? 'active' : ''}`}
+                                                style={{ backgroundColor: opt.color }}
+                                                onClick={() => setFormData(prev => ({ ...prev, colorHighlight: opt.color }))}
+                                                title={opt.name}
+                                            />
+                                        ))}
+                                        <input
+                                            type="color"
+                                            value={formData.colorHighlight}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, colorHighlight: e.target.value }))}
+                                            className="color-picker-mini"
+                                            title="Custom Color"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -335,60 +479,6 @@ const WishForm = () => {
                             <span className="char-count">
                                 {formData.message.length}/200
                             </span>
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label>🎨 Quick Themes</label>
-                        <div className="color-presets">
-                            {colorPresets.map(preset => (
-                                <div
-                                    key={preset.name}
-                                    className={`preset-item ${formData.colorHighlight === preset.highlight ? 'active' : ''}`}
-                                    onClick={() => setFormData(prev => ({
-                                        ...prev,
-                                        colorHighlight: preset.highlight,
-                                        colorBg: preset.bg
-                                    }))}
-                                >
-                                    <button
-                                        type="button"
-                                        className="preset-btn"
-                                        style={{
-                                            '--p-highlight': preset.highlight,
-                                            '--p-bg': preset.bg,
-                                            border: formData.colorHighlight === preset.highlight ? '3px solid var(--accent-purple)' : '2px solid rgba(0,0,0,0.15)'
-                                        }}
-                                        title={preset.name}
-                                    />
-                                    <span className="preset-name">{preset.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="form-group row-flex">
-                        <div className="color-input-group">
-                            <label htmlFor="colorHighlight">Highlight Color</label>
-                            <input
-                                type="color"
-                                id="colorHighlight"
-                                value={formData.colorHighlight}
-                                onChange={(e) => setFormData({ ...formData, colorHighlight: e.target.value })}
-                                className="color-picker"
-                            />
-                            <span className="helper-text">Click to customize</span>
-                        </div>
-                        <div className="color-input-group">
-                            <label htmlFor="colorBg">Background Color</label>
-                            <input
-                                type="color"
-                                id="colorBg"
-                                value={formData.colorBg}
-                                onChange={(e) => setFormData({ ...formData, colorBg: e.target.value })}
-                                className="color-picker"
-                            />
-                            <span className="helper-text">Click to customize</span>
                         </div>
                     </div>
 

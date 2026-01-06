@@ -23,7 +23,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [bgImage, setBgImage] = useState(null);
-    const [showGift, setShowGift] = useState(false); // Animation plays immediately like a GIF
+    const [showGift, setShowGift] = useState(isSharedView); // Show gift reveal only for recipients
     const [isOpening, setIsOpening] = useState(false);
     const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
     const [shareableLink, setShareableLink] = useState('');
@@ -47,10 +47,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         }
     }, [wishData]);
 
-    // Utility to encode wish data
+    // Utility to encode wish data (Safe for UTF-8)
     function encodeWishData(data) {
         const json = JSON.stringify(data);
-        return btoa(encodeURIComponent(json));
+        const encoded = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+            return String.fromCharCode('0x' + p1);
+        }));
+        return encoded;
     }
 
     const handleBack = () => {
@@ -107,7 +110,11 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     }, [bgImage]);
 
     const drawGrid = useCallback((ctx, opacity = 1) => {
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.15 * opacity})`;
+        const isLt = TinyColor(bgColor).isLight();
+        ctx.strokeStyle = isLt
+            ? `rgba(0, 0, 0, ${0.1 * opacity})`
+            : `rgba(255, 255, 255, ${0.15 * opacity})`;
+
         ctx.lineWidth = 2;
         for (let i = 0; i <= 4; i++) {
             ctx.beginPath();
@@ -119,7 +126,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.lineTo(startX + i * cellSize, startY + gridSize);
             ctx.stroke();
         }
-    }, [cellSize, gridSize, startX, startY]);
+    }, [cellSize, gridSize, startX, startY, bgColor]);
 
     const renderFrame = useCallback((ctx, frame, total) => {
         const progress = frame / total;
@@ -247,104 +254,149 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 2: MAGIC SQUARE APPEARANCE (0.14 - 0.26) ═══════════════════
+        // ═══════════════════ SCREEN 2: ALL NUMBERS + TITLE + SUM (0.14 - 0.26) ═══════════════════
         else if (progress >= 0.14 && progress < 0.26) {
             const p = (progress - 0.14) / 0.12;
-            const fade = smoothFade(p, 0.25, 0.85);
+            const fade = smoothFade(p, 0.2, 0.85);
 
-            // Draw grid
             drawGrid(ctx, fade);
 
-            // All cells appear smoothly, row by row
+            // Draw all cells - appear smoothly
             for (let ri = 0; ri < 4; ri++) {
                 for (let ci = 0; ci < 4; ci++) {
                     const cellIndex = ri * 4 + ci;
-                    const delay = cellIndex * 0.035;
-                    const cellFade = Math.max(0, Math.min(1, (p - delay) / 0.2));
+                    const delay = cellIndex * 0.03;
+                    const cellFade = Math.max(0, Math.min(1, (p - delay) / 0.15));
                     drawCell(ri, ci, cellFade * fade, null, false);
                 }
             }
 
-            // Subtle title
-            if (p > 0.4) {
+            // Title - wishyfi.com
+            if (p > 0.3) {
                 ctx.save();
-                ctx.globalAlpha = (p - 0.4) * fade;
-                ctx.fillStyle = baseTextColor;
+                ctx.globalAlpha = ((p - 0.3) / 0.7) * fade;
+                ctx.fillStyle = highlightColor;
                 ctx.textAlign = 'center';
-                ctx.font = `${cellSize * 0.18}px 'Poppins', sans-serif`;
-                ctx.fillText('Ramanujan Magic Square', startX + gridSize / 2, startY - 45);
+                ctx.font = `bold ${cellSize * 0.24}px 'Poppins', sans-serif`;
+                ctx.shadowColor = highlightColor;
+                ctx.shadowBlur = 15;
+                ctx.fillText('wishyfi.com', startX + gridSize / 2, startY - 35);
+                ctx.restore();
+            }
+
+            // Sum display
+            if (p > 0.5) {
+                ctx.save();
+                ctx.globalAlpha = ((p - 0.5) / 0.5) * fade;
+                ctx.fillStyle = '#4ecdc4';
+                ctx.textAlign = 'center';
+                ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
+                ctx.shadowColor = '#4ecdc4';
+                ctx.shadowBlur = 12;
+                ctx.fillText(`Sum = ${magicConstant}`, startX + gridSize / 2, startY + gridSize + 50);
                 ctx.restore();
             }
         }
 
-        // ═══════════════════ SCREEN 3: COMBINED PATTERN REVEAL (0.26 - 0.42) ═══════════════════
+        // ═══════════════════ SCREEN 3: X DIAGONAL COLOR ANIMATION (0.26 - 0.42) ═══════════════════
         else if (progress >= 0.26 && progress < 0.42) {
             const p = (progress - 0.26) / 0.16;
-            const fade = smoothFade(p, 0.15, 0.85);
+            const fade = smoothFade(p, 0.1, 0.9);
 
             drawGrid(ctx, 1);
 
-            // First reveal row 1 (the date) - 0-50%
-            if (p < 0.5) {
-                const rowP = p / 0.5;
-                const rowFade = easeInOut(rowP);
+            // Define diagonal cells
+            const mainDiag = [[0, 0], [1, 1], [2, 2], [3, 3]]; // Top-left to bottom-right
+            const antiDiag = [[0, 3], [1, 2], [2, 1], [3, 0]]; // Top-right to bottom-left
+            const allDiagCells = new Set([...mainDiag.map(c => `${c[0]},${c[1]}`), ...antiDiag.map(c => `${c[0]},${c[1]}`)]);
 
-                drawRowBg(0, rowFade, highlightColor);
+            // Progress for cell reveal (each diagonal cell lights up in sequence)
+            const revealProgress = Math.min(1, p * 1.2);
 
-                for (let ci = 0; ci < 4; ci++) {
-                    const cellDelay = ci * 0.15;
-                    const cellFade = Math.max(0, Math.min(1, (rowP - cellDelay) / 0.3));
-                    drawCell(0, ci, cellFade, highlightColor, true);
-                }
+            // Draw colored backgrounds for diagonal cells (instead of stroke lines)
+            ctx.save();
+            for (let i = 0; i < 4; i++) {
+                const cellDelay = i * 0.2;
+                const cellProgress = Math.max(0, Math.min(1, (revealProgress - cellDelay) / 0.3));
 
-                // Other cells dimmed
-                for (let ri = 1; ri < 4; ri++) {
-                    for (let ci = 0; ci < 4; ci++) {
-                        drawCell(ri, ci, 0.3, null, false);
-                    }
-                }
+                if (cellProgress > 0) {
+                    // Main diagonal cell background
+                    const [mr, mc] = mainDiag[i];
+                    ctx.globalAlpha = cellProgress * fade * 0.4;
+                    ctx.fillStyle = '#ff6b6b';
+                    ctx.shadowColor = '#ff6b6b';
+                    ctx.shadowBlur = 20;
+                    ctx.fillRect(startX + mc * cellSize, startY + mr * cellSize, cellSize, cellSize);
 
-                // Label: "Your Special Date"
-                if (rowP > 0.5) {
-                    ctx.save();
-                    ctx.globalAlpha = (rowP - 0.5) * 2;
-                    ctx.fillStyle = highlightColor;
-                    ctx.textAlign = 'center';
-                    ctx.font = `bold ${cellSize * 0.22}px 'Poppins', sans-serif`;
-                    ctx.fillText('Your Special Date', startX + gridSize / 2, startY - 35);
-                    ctx.restore();
+                    // Anti-diagonal cell background
+                    const [ar, ac] = antiDiag[i];
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.shadowColor = '#4ecdc4';
+                    ctx.fillRect(startX + ac * cellSize, startY + ar * cellSize, cellSize, cellSize);
                 }
             }
-            // Then reveal first column - 50-100%
-            else {
-                const colP = (p - 0.5) / 0.5;
-                const colFade = easeInOut(colP);
+            ctx.restore();
 
-                drawColBg(0, colFade, '#4ecdc4');
+            // Draw cells with X highlighting
+            for (let ri = 0; ri < 4; ri++) {
+                for (let ci = 0; ci < 4; ci++) {
+                    const isOnDiag = allDiagCells.has(`${ri},${ci}`);
+                    const isMainDiag = ri === ci;
+                    const isAntiDiag = ri + ci === 3;
 
-                for (let ri = 0; ri < 4; ri++) {
-                    const cellDelay = ri * 0.15;
-                    const cellFade = Math.max(0, Math.min(1, (colP - cellDelay) / 0.3));
-                    drawCell(ri, 0, cellFade, '#4ecdc4', true);
-                }
-
-                // Other cells dimmed
-                for (let ri = 0; ri < 4; ri++) {
-                    for (let ci = 1; ci < 4; ci++) {
-                        drawCell(ri, ci, 0.3, null, false);
+                    // Determine cell color
+                    let cellColor = null;
+                    if (isMainDiag && isAntiDiag) {
+                        cellColor = '#ffe66d'; // Intersection - yellow
+                    } else if (isMainDiag) {
+                        cellColor = '#ff6b6b'; // Main diagonal - red
+                    } else if (isAntiDiag) {
+                        cellColor = '#4ecdc4'; // Anti-diagonal - teal
                     }
-                }
 
-                // Sum label
-                if (colP > 0.5) {
-                    ctx.save();
-                    ctx.globalAlpha = (colP - 0.5) * 2;
-                    ctx.fillStyle = '#4ecdc4';
-                    ctx.textAlign = 'center';
-                    ctx.font = `bold ${cellSize * 0.24}px 'Poppins', sans-serif`;
-                    ctx.fillText(`= ${magicConstant}`, startX + cellSize / 2, startY + gridSize + 40);
-                    ctx.restore();
+                    const cellAlpha = isOnDiag ? fade : 0.3 * fade;
+                    drawCell(ri, ci, cellAlpha, cellColor, isOnDiag);
                 }
+            }
+
+            // Show X = Sum title
+            ctx.save();
+            ctx.globalAlpha = fade;
+            ctx.textAlign = 'center';
+            ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
+
+            // Color based on progress
+            let titleColor;
+            if (p < 0.33) {
+                titleColor = '#ff6b6b';
+            } else if (p < 0.66) {
+                titleColor = '#4ecdc4';
+            } else {
+                titleColor = '#ffe66d';
+            }
+            ctx.fillStyle = titleColor;
+            ctx.shadowColor = titleColor;
+            ctx.shadowBlur = 20;
+
+            ctx.fillText(`Diagonals = ${magicConstant}`, startX + gridSize / 2, startY - 35);
+            ctx.restore();
+
+            // Sparkle effects around the grid
+            if (fade > 0.3) {
+                ctx.save();
+                const sparkleCount = 8;
+                for (let i = 0; i < sparkleCount; i++) {
+                    const angle = (p + i / sparkleCount) * Math.PI * 2;
+                    const radius = gridSize * 0.55;
+                    const sx = startX + gridSize / 2 + Math.cos(angle) * radius;
+                    const sy = startY + gridSize / 2 + Math.sin(angle) * radius;
+                    const sparkleAlpha = fade * 0.6;
+
+                    ctx.globalAlpha = sparkleAlpha;
+                    ctx.font = `${cellSize * 0.25}px serif`;
+                    ctx.fillText('✨', sx, sy);
+                }
+                ctx.restore();
             }
         }
 
@@ -430,7 +482,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 6: FLASH EMPHASIS (0.70 - 0.82) ═══════════════════
+        // ═══════════════════ SCREEN 6: ROW EMPHASIS - ONCE EACH (0.70 - 0.82) ═══════════════════
         else if (progress >= 0.70 && progress < 0.82) {
             const p = (progress - 0.70) / 0.12;
             const fade = smoothFade(p, 0.15, 0.85);
@@ -439,29 +491,35 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
             const rowColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
 
-            // Rhythmic flash - which row is currently flashing
-            const cycleSpeed = 2.5; // How many full cycles in this screen
-            const flashRow = Math.floor((p * cycleSpeed * 4)) % 4;
-            const flashIntensity = Math.sin(p * Math.PI * cycleSpeed * 4) * 0.5 + 0.5;
-
+            // Each row lights up once in sequence
             for (let ri = 0; ri < 4; ri++) {
-                const isFlashing = ri === flashRow;
-                const intensity = isFlashing ? flashIntensity : 0.4;
+                const rowStart = ri * 0.25; // Each row takes 25% of screen time
+                const rowEnd = rowStart + 0.25;
+
+                let intensity;
+                if (p < rowStart) {
+                    intensity = 0.3; // Not yet
+                } else if (p < rowEnd) {
+                    const rowP = (p - rowStart) / 0.25;
+                    intensity = 0.3 + 0.7 * Math.sin(rowP * Math.PI); // Fade in and out
+                } else {
+                    intensity = 0.5; // After highlight, stay semi-bright
+                }
 
                 drawRowBg(ri, intensity * fade, rowColors[ri]);
 
                 for (let ci = 0; ci < 4; ci++) {
-                    drawCell(ri, ci, intensity * fade, rowColors[ri], isFlashing);
+                    drawCell(ri, ci, intensity * fade, rowColors[ri], p >= rowStart && p < rowEnd);
                 }
             }
 
             // Title
             ctx.save();
             ctx.globalAlpha = fade;
-            ctx.fillStyle = baseTextColor;
+            ctx.fillStyle = highlightColor;
             ctx.textAlign = 'center';
             ctx.font = `bold ${cellSize * 0.2}px 'Poppins', sans-serif`;
-            ctx.fillText('Rhythm of Mathematics', startX + gridSize / 2, startY - 35);
+            ctx.fillText('Every Row Sums to ' + magicConstant, startX + gridSize / 2, startY - 35);
             ctx.restore();
         }
 
@@ -578,26 +636,68 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
     // Helper for interactive elements
     const renderInteractions = (ctx, size, mouse, aura, confetti, crackers, progress) => {
-        // 1. Crackers (Fireworks during Reveal)
-        crackers.current.forEach((p, i) => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.1; // Gravity
-            p.life -= 0.015;
-            if (p.life <= 0) crackers.current.splice(i, 1);
+        // Trigger crackers at multiple key animation moments
+        const crackerTriggers = [
+            { start: 0.14, end: 0.16, x: size / 2, y: size / 2 },      // After intro
+            { start: 0.26, end: 0.28, x: size * 0.3, y: size * 0.3 },  // Start of X animation
+            { start: 0.35, end: 0.37, x: size * 0.7, y: size * 0.7 },  // Middle of X animation
+            { start: 0.42, end: 0.44, x: size / 2, y: size * 0.3 },    // Start of blocks
+            { start: 0.56, end: 0.58, x: size * 0.2, y: size / 2 },    // Start of rows
+            { start: 0.70, end: 0.72, x: size * 0.8, y: size / 2 },    // Row emphasis
+            { start: 0.82, end: 0.85, x: size / 2, y: size * 0.4 },    // Final greeting - big burst
+        ];
 
-            ctx.save();
-            ctx.globalAlpha = p.life;
-            ctx.fillStyle = p.color;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
+        crackerTriggers.forEach(trigger => {
+            if (progress > trigger.start && progress < trigger.end) {
+                // Only trigger once per burst
+                const triggerId = `cracker_${trigger.start}`;
+                if (!crackers.current.triggered) crackers.current.triggered = {};
+                if (!crackers.current.triggered[triggerId]) {
+                    crackers.current.triggered[triggerId] = true;
+                    const particleCount = trigger.start === 0.82 ? 80 : 45; // More particles for final burst
+                    for (let i = 0; i < particleCount; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const velocity = 3 + Math.random() * 10;
+                        const hue = Math.random() * 360;
+                        crackers.current.push({
+                            x: trigger.x,
+                            y: trigger.y,
+                            vx: Math.cos(angle) * velocity,
+                            vy: Math.sin(angle) * velocity,
+                            life: 1.0 + Math.random() * 0.5,
+                            r: Math.random() * 4 + 1.5,
+                            color: `hsl(${hue}, 100%, 65%)`
+                        });
+                    }
+                }
+            }
         });
 
-        // 2. Magic Aura (Mouse Follow)
+        // Render crackers (Fireworks)
+        crackers.current.forEach((p, i) => {
+            if (typeof p === 'object' && p.x !== undefined) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.12; // Gravity
+                p.life -= 0.018;
+                if (p.life <= 0) {
+                    crackers.current.splice(i, 1);
+                    return;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        });
+
+        // Magic Aura (Mouse Follow)
         if (mouse.x > 0) {
             if (aura.current.length < 20) {
                 aura.current.push({
@@ -627,14 +727,14 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         });
 
-        // 2. Confetti Burst (Trigger at progress ~0.6)
-        if (progress > 0.6 && progress < 0.63 && confetti.current.length === 0) {
-            for (let i = 0; i < 100; i++) {
+        // Confetti Burst (at final greeting)
+        if (progress > 0.85 && progress < 0.88 && confetti.current.length === 0) {
+            for (let i = 0; i < 120; i++) {
                 confetti.current.push({
                     x: size / 2,
                     y: size / 2,
-                    vx: (Math.random() - 0.5) * 15,
-                    vy: (Math.random() - 0.8) * 15,
+                    vx: (Math.random() - 0.5) * 18,
+                    vy: (Math.random() - 0.8) * 18,
                     r: Math.random() * 6 + 4,
                     color: `hsl(${Math.random() * 360}, 80%, 60%)`,
                     rotation: Math.random() * Math.PI,
@@ -643,7 +743,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        if (progress > 0.6) {
+        if (progress > 0.85) {
             confetti.current.forEach((p) => {
                 p.x += p.vx;
                 p.y += p.vy;
@@ -954,7 +1054,36 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                 >
                                     {showShareOptions ? '✕ Close' : '📤 Share'}
                                 </button>
+
+                                {/* Download GIF Button - Moved here next to Share */}
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleGenerateGif}
+                                    disabled={isGenerating}
+                                    title="Download as animated GIF"
+                                >
+                                    {isGenerating ? '⏳ Generating...' : '📥 Download GIF'}
+                                </button>
                             </div>
+
+                            {/* Progress Bar during GIF generation */}
+                            {isGenerating && gifProgress > 0 && (
+                                <div className="mb-md">
+                                    <ProgressBar progress={gifProgress} label="Creating your GIF..." />
+                                </div>
+                            )}
+
+                            {/* GIF Ready - Show Preview & Download */}
+                            {isFinished && gifUrl && (
+                                <div className="gif-ready-section mb-md fade-in">
+                                    <div className="gif-preview-box mb-sm">
+                                        <img src={gifUrl} alt="Magic Gift" className="gif-preview" />
+                                    </div>
+                                    <button onClick={handleDownloadGif} className="btn btn-primary">
+                                        📥 Download GIF Now
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Success Message */}
                             {linkCopied && (
@@ -1002,35 +1131,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                                 📤 More Apps
                                             </button>
                                         )}
-
-                                        {/* Download GIF */}
-                                        <button
-                                            className="share-link-btn share-download-btn"
-                                            onClick={handleGenerateGif}
-                                            disabled={isGenerating}
-                                        >
-                                            {isGenerating ? 'Generating...' : 'Download GIF'}
-                                        </button>
                                     </div>
-
-                                    {/* Progress Bar during GIF generation */}
-                                    {isGenerating && gifProgress > 0 && (
-                                        <div className="mt-md">
-                                            <ProgressBar progress={gifProgress} label="Creating your GIF..." />
-                                        </div>
-                                    )}
-
-                                    {/* GIF Ready - Show Preview & Download */}
-                                    {isFinished && gifUrl && (
-                                        <div className="gif-ready-section mt-md fade-in">
-                                            <div className="gif-preview-box mb-sm">
-                                                <img src={gifUrl} alt="Magic Gift" className="gif-preview" />
-                                            </div>
-                                            <button onClick={handleDownloadGif} className="btn btn-primary">
-                                                📥 Download GIF Now
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>

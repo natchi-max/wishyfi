@@ -47,7 +47,7 @@ const LandingPage = () => {
                     <div className="feature-card slide-up stagger-2">
                         <div className="feature-icon">🧮</div>
                         <h3>Mathematical Magic</h3>
-                        <p>Ramanujan-inspired 4×4 magic squares</p>
+                        <p>Unique 4×4 magic square patterns</p>
                     </div>
 
                     <div className="feature-card slide-up stagger-3">

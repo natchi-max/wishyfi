@@ -4,6 +4,8 @@ import LandingPage from './components/LandingPage';
 import WishForm from './components/WishForm';
 import MagicSquareAnimation from './components/MagicSquareAnimation';
 import DigitalGreetingAnimation from './components/DigitalGreetingAnimation';
+import CinematicXAnimation from './components/CinematicXAnimation';
+import RamanujanXAnimation from './components/RamanujanXAnimation';
 import SharedWish from './components/SharedWish';
 import NotFound from './components/NotFound';
 
@@ -27,6 +29,14 @@ export const router = createBrowserRouter([
       {
         path: 'digital/:wishId?',
         element: <DigitalGreetingAnimation />
+      },
+      {
+        path: 'cinematic-x',
+        element: <CinematicXAnimation />
+      },
+      {
+        path: 'ramanujan-x',
+        element: <RamanujanXAnimation />
       },
       {
         path: 'share/:shareId',

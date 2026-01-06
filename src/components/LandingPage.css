@@ -106,7 +106,7 @@
 .mouse {
     width: 26px;
     height: 40px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(0, 0, 0, 0.2);
     border-radius: 13px;
     position: relative;
 }
@@ -114,7 +114,7 @@
 .wheel {
     width: 4px;
     height: 8px;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.3);
     border-radius: 2px;
     position: absolute;
     top: 8px;
@@ -163,6 +163,7 @@
         font-size: 3rem;
     }
 }
+
 .hero-buttons {
     display: flex;
     gap: 1rem;
@@ -175,7 +176,7 @@
         flex-direction: column;
         align-items: center;
     }
-    
+
     .hero-buttons .btn {
         width: 100%;
         max-width: 280px;

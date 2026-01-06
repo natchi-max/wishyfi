@@ -531,7 +531,7 @@ const DigitalGreetingAnimation = () => {
                 const file = new File([gifBlob], `digital_greeting_${wishData.recipientName}.gif`, { type: 'image/gif' });
                 await navigator.share({
                     title: `Magic Wish for ${wishData.recipientName}`,
-                    text: `A special ${wishData.occasion} wish created with Ramanujan Magic Square! ✨`,
+                    text: `A special ${wishData.occasion} wish created with Wishyfi! ✨`,
                     files: [file]
                 });
             } catch (err) {
@@ -562,7 +562,7 @@ const DigitalGreetingAnimation = () => {
                 try {
                     await navigator.clipboard.writeText(
                         `🎁 Magic Wish for ${wishData.recipientName}!\n` +
-                        `Created with Ramanujan Magic Square ✨\n` +
+                        `Created with Wishyfi ✨\n` +
                         `${window.location.origin}`
                     );
                     setCopySuccess(true);
