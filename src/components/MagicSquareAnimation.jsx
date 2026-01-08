@@ -147,12 +147,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         // ════════════════════════════════════════════════════════════
         // CINEMATIC 7-SCREEN FLOW (EXACT SPECIFICATION)
         // ════════════════════════════════════════════════════════════
-        // Screen 1 (0.00 - 0.14): Introduction - "Hi [Name], This is not random, Watch closely"
-        // Screen 2 (0.14 - 0.26): Magic Square Appearance - Full 4×4 grid
-        // Screen 3 (0.26 - 0.42): Combined Pattern Reveal - Row/Column highlights with date reveal
-        // Screen 5 (0.56 - 0.70): Row Coloring - Each row gets unique color (Visual logic only)
-        // Screen 6 (0.70 - 0.82): Rhythmic Harmony - Each row pulses with magic
-        // Screen 7 (0.82 - 1.00): Final Greeting - Template background with message
+        // Screen 1 (0.00 - 0.14): Introduction - "Hi [Name], Watch closely"
+        // Screen 2 (0.14 - 0.26): Date Foundation - First row glows, then full grid
+        // Screen 3 (0.26 - 0.42): Mathematical Miracle - Strong 'XX' diagonal glow
+        // Screen 4 (0.42 - 0.56): Secret Recipe - Grouping by DD, MM, CC, YY components
+        // Screen 5 (0.56 - 0.70): Perfect Harmony - Row/Column balance
+        // Screen 6 (0.70 - 0.82): Elegant Pulse - Final rhythmic glow
+        // Screen 7 (0.82 - 1.00): Heartfelt Greeting - Final message & background
 
         // Clear & Background
         ctx.fillStyle = bgColor;
@@ -234,9 +235,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Hi [Name] (0-33%)
-            if (p < 0.33) {
-                const fade = smoothFade(p / 0.33, 0.2, 0.8);
+            // Hi [Name] (0-50%)
+            if (p < 0.5) {
+                const fade = smoothFade(p / 0.5, 0.2, 0.8);
                 ctx.globalAlpha = fade;
                 ctx.fillStyle = highlightColor;
                 ctx.font = `bold ${size * 0.09}px 'Playfair Display', serif`;
@@ -244,17 +245,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 ctx.shadowBlur = 30;
                 ctx.fillText(`Hi ${wishData?.recipientName || 'there'}`, size / 2, size / 2 - 20);
             }
-            // This is not random (33-66%)
-            else if (p < 0.66) {
-                const fade = smoothFade((p - 0.33) / 0.33, 0.2, 0.8);
-                ctx.globalAlpha = fade;
-                ctx.fillStyle = baseTextColor;
-                ctx.font = `italic ${size * 0.05}px 'Playfair Display', serif`;
-                ctx.fillText('This is not random', size / 2, size / 2);
-            }
-            // Watch closely (66-100%)
+            // Watch closely (50-100%)
             else {
-                const fade = smoothFade((p - 0.66) / 0.34, 0.2, 0.75);
+                const fade = smoothFade((p - 0.5) / 0.5, 0.2, 0.75);
                 ctx.globalAlpha = fade;
                 ctx.fillStyle = highlightColor;
                 ctx.font = `bold ${size * 0.06}px 'Poppins', sans-serif`;
@@ -263,49 +256,66 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 ctx.fillText('Watch closely', size / 2, size / 2);
             }
 
+            // Add wishyfi.com at bottom
+            const currentFade = p < 0.5 ? smoothFade(p / 0.5, 0.2, 0.8) : smoothFade((p - 0.5) / 0.5, 0.2, 0.75);
+            ctx.globalAlpha = Math.min(currentFade, 0.7);
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
+            ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+            ctx.fillText('wishyfi.com', size / 2, size - 30);
+
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 2: ALL NUMBERS + TITLE + SUM (0.14 - 0.26) ═══════════════════
+        // ═══════════════════ SCREEN 2: DATE FOUNDATION (0.14 - 0.26) ═══════════════════
         else if (progress >= 0.14 && progress < 0.26) {
             const p = (progress - 0.14) / 0.12;
             const fade = smoothFade(p, 0.2, 0.85);
 
             drawGrid(ctx, fade);
 
-            // Draw all cells - appear smoothly
+            // Highlight Screen: First Row (The Date) stays glowing
             for (let ri = 0; ri < 4; ri++) {
                 for (let ci = 0; ci < 4; ci++) {
                     const cellIndex = ri * 4 + ci;
-                    const delay = cellIndex * 0.03;
+                    const delay = ri === 0 ? 0 : 0.1 + (cellIndex * 0.03);
                     const cellFade = Math.max(0, Math.min(1, (p - delay) / 0.15));
-                    drawCell(ri, ci, cellFade * fade, null, false);
+
+                    // First row is the "Foundation"
+                    const isFoundation = ri === 0;
+                    const cellColor = isFoundation && p > 0.3 ? highlightColor : null;
+                    drawCell(ri, ci, cellFade * fade, cellColor, isFoundation);
                 }
             }
 
-            // Title - wishyfi.com
+            // Title - The Foundation
             if (p > 0.3) {
                 ctx.save();
                 ctx.globalAlpha = ((p - 0.3) / 0.7) * fade;
                 ctx.fillStyle = highlightColor;
                 ctx.textAlign = 'center';
-                ctx.font = `bold ${cellSize * 0.24}px 'Poppins', sans-serif`;
+                ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
                 ctx.shadowColor = highlightColor;
                 ctx.shadowBlur = 15;
-                ctx.fillText('Wishyfi', startX + gridSize / 2, startY - 35);
+                ctx.fillText(`Your Date Secret`, startX + gridSize / 2, startY - 35);
                 ctx.restore();
             }
 
-            // Sum display
-            if (p > 0.5) {
+            // Magic Constant Sum display
+            if (p > 0.6) {
                 ctx.save();
-                ctx.globalAlpha = ((p - 0.5) / 0.5) * fade;
-                ctx.fillStyle = '#4ecdc4';
+                ctx.globalAlpha = ((p - 0.6) / 0.4) * fade;
+                ctx.fillStyle = '#10b981';
                 ctx.textAlign = 'center';
                 ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
-                ctx.shadowColor = '#4ecdc4';
+                ctx.shadowColor = '#10b981';
                 ctx.shadowBlur = 12;
-                ctx.fillText(`Sum = ${magicConstant}`, startX + gridSize / 2, startY + gridSize + 50);
+                ctx.fillText(`Magic Sum: ${magicConstant}`, startX + gridSize / 2, startY + gridSize + 50);
+                
+                // Add wishyfi.com
+                ctx.globalAlpha = ((p - 0.6) / 0.4) * fade * 0.7;
+                ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
+                ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+                ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
                 ctx.restore();
             }
         }
@@ -388,35 +398,51 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.shadowColor = '#000';
             ctx.shadowBlur = 10;
             ctx.fillText(`Mathematical Miracle`, startX + gridSize / 2, startY - 35);
+            
+            // Add wishyfi.com
+            ctx.globalAlpha = fade * 0.7;
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.8)';
+            ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 5;
+            ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 4: COLOR BLOCK STRUCTURE (0.42 - 0.56) ═══════════════════
+        // ═══════════════════ SCREEN 4: SECRET RECIPE (0.42 - 0.56) ═══════════════════
         else if (progress >= 0.42 && progress < 0.56) {
             const p = (progress - 0.42) / 0.14;
             const fade = smoothFade(p, 0.2, 0.85);
 
             drawGrid(ctx, 1);
 
-            // Four 2×2 blocks with unique colors
-            const blockColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
+            // Component Categories (Based on the Logic Image)
+            // Yellow (DD), Grey (MM), Orange (CC), Green (YY)
+            const catColors = ['#facc15', '#94a3b8', '#fb923c', '#4ade80'];
 
-            for (let block = 0; block < 4; block++) {
-                const blockDelay = block * 0.2;
-                const blockFade = Math.max(0, Math.min(1, (p - blockDelay) / 0.25));
+            // Map cells to their component categories (The Secret Logic)
+            const categoryMap = [
+                [0, 1, 2, 3], // Row 1
+                [3, 2, 1, 0], // Row 2
+                [1, 0, 3, 2], // Row 3
+                [2, 3, 0, 1]  // Row 4
+            ];
 
-                if (blockFade > 0) {
-                    drawBlockBg(block, blockFade, blockColors[block]);
-                }
-            }
-
-            // Draw all cells with block colors
             for (let ri = 0; ri < 4; ri++) {
                 for (let ci = 0; ci < 4; ci++) {
-                    const blockIndex = Math.floor(ri / 2) * 2 + Math.floor(ci / 2);
-                    const blockDelay = blockIndex * 0.2;
-                    const cellFade = Math.max(0, Math.min(1, (p - blockDelay - 0.1) / 0.2));
-                    drawCell(ri, ci, cellFade * fade, blockColors[blockIndex], false);
+                    const cat = categoryMap[ri][ci];
+                    const catDelay = cat * 0.15;
+                    const cellFade = Math.max(0, Math.min(1, (p - catDelay) / 0.25));
+
+                    if (cellFade > 0) {
+                        ctx.save();
+                        ctx.globalAlpha = cellFade * fade * 0.3;
+                        ctx.fillStyle = catColors[cat];
+                        ctx.fillRect(startX + ci * cellSize, startY + ri * cellSize, cellSize, cellSize);
+                        ctx.restore();
+
+                        drawCell(ri, ci, cellFade * fade, catColors[cat], cellFade > 0.7);
+                    }
                 }
             }
 
@@ -427,7 +453,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 ctx.fillStyle = highlightColor;
                 ctx.textAlign = 'center';
                 ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
-                ctx.fillText(`Sum = ${magicConstant}`, startX + gridSize / 2, startY - 35);
+                ctx.fillText(`Hidden Distribution`, startX + gridSize / 2, startY - 35);
+                
+                // Add wishyfi.com
+                ctx.globalAlpha = Math.min(1, (p - 0.3) / 0.3) * fade * 0.7;
+                ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
+                ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+                ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
                 ctx.restore();
             }
         }
@@ -469,6 +501,12 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 ctx.textAlign = 'center';
                 ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
                 ctx.fillText(`Perfect Balance`, startX + gridSize / 2, startY - 35);
+                
+                // Add wishyfi.com
+                ctx.globalAlpha = Math.min(1, (p - 0.2) / 0.3) * fade * 0.7;
+                ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
+                ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+                ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
                 ctx.restore();
             }
         }
@@ -511,6 +549,12 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.textAlign = 'center';
             ctx.font = `bold ${cellSize * 0.2}px 'Poppins', sans-serif`;
             ctx.fillText('Every Row Sums to ' + magicConstant, startX + gridSize / 2, startY - 35);
+            
+            // Add wishyfi.com
+            ctx.globalAlpha = fade * 0.7;
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
+            ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+            ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
             ctx.restore();
         }
 
@@ -581,6 +625,11 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.fillStyle = 'rgba(255,255,255,0.9)';
             ctx.font = `${size * 0.024}px 'Poppins', sans-serif`;
             ctx.fillText(`${wishData?.date || dateStr}`, size / 2, size * 0.88);
+            
+            // Add wishyfi.com
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.font = `${size * 0.022}px 'Inter', sans-serif`;
+            ctx.fillText('wishyfi.com', size / 2, size * 0.93);
 
             ctx.restore();
 
@@ -875,24 +924,39 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     const handleShareGif = async () => {
         let currentBlob = gifBlob;
 
+        // Generate GIF first if not available
         if (!currentBlob) {
             currentBlob = await handleGenerateGif();
-            if (!currentBlob) return;
+            if (!currentBlob) {
+                alert('Failed to generate GIF. Please try again.');
+                return;
+            }
         }
 
         setIsSharing(true);
         try {
             // Include link in the message if shareableLink is ready
-            const linkMessage = `✨ View my magical wish: ${shareableLink}`;
+            const linkMessage = shareableLink 
+                ? `✨ View my magical wish: ${shareableLink}`
+                : `✨ A magical wish created with Ramanujan's mathematics!`;
 
             const shared = await shareGifFile(currentBlob, wishData, linkMessage);
             if (!shared) {
+                // Fallback: download with instructions
                 downloadGifWithInstructions(currentBlob, wishData);
-                alert(`GIF Downloaded! \n\nTo share on WhatsApp: \n1. Open WhatsApp chat \n2. Attach Gallery image \n3. Paste link in caption: ${shareableLink}`);
+                const instructions = shareableLink 
+                    ? `GIF Downloaded! \n\nTo share on WhatsApp: \n1. Open WhatsApp chat \n2. Attach Gallery image \n3. Paste link in caption: ${shareableLink}`
+                    : `GIF Downloaded! \n\nTo share: \n1. Open your messaging app \n2. Attach the downloaded GIF file`;
+                alert(instructions);
             }
         } catch (error) {
             console.error('Share failed:', error);
-            if (currentBlob) downloadGifWithInstructions(currentBlob, wishData);
+            if (currentBlob) {
+                downloadGifWithInstructions(currentBlob, wishData);
+                alert('Share failed, but GIF was downloaded. You can manually attach it to your messages.');
+            } else {
+                alert('Share failed. Please try again.');
+            }
         } finally {
             setIsSharing(false);
         }

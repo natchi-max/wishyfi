@@ -1,9 +1,47 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 
 const LandingPage = () => {
     const navigate = useNavigate();
+
+    // Add scroll animations
+    useEffect(() => {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections and cards
+        const elements = document.querySelectorAll('.step-card, .example-mini-card, .section-container, .preview-card');
+        elements.forEach(el => observer.observe(el));
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        return () => {
+            elements.forEach(el => observer.unobserve(el));
+        };
+    }, []);
 
     const handleStartToday = () => {
         const today = new Date();
@@ -22,7 +60,7 @@ const LandingPage = () => {
     };
 
     const handleSampleBirthday = () => {
-        // Navigate to create with sample data
+        // Navigate to create with sample data - Alex's Birthday: 14/07/2000
         navigate('/create', {
             state: {
                 sampleData: {
@@ -36,25 +74,6 @@ const LandingPage = () => {
 
     return (
         <div className="home-root">
-            {/* Header */}
-            <header className="home-header">
-                <div className="header-container">
-                    <div className="brand">
-                        <div className="brand-logo">W</div>
-                        <span className="brand-name">Wishyfi</span>
-                    </div>
-                    <nav className="header-nav">
-                        <a href="#how-it-works" className="nav-link">How it works</a>
-                        <a href="#examples" className="nav-link">Examples</a>
-                        <button
-                            onClick={handleStartToday}
-                            className="btn-create-small"
-                        >
-                            Create a wish
-                        </button>
-                    </nav>
-                </div>
-            </header>
 
             <main>
                 {/* Hero */}
@@ -96,24 +115,26 @@ const LandingPage = () => {
                         <div className="hero-preview">
                             <div className="preview-card">
                                 <div className="preview-header">
-                                    <span>Preview</span>
-                                    <span>Birthday · 07 · 14 · 2026</span>
+                                    <span>✨ Preview</span>
+                                    <span className="preview-date-badge">Birthday</span>
                                 </div>
                                 <div className="preview-grid-box">
                                     <p className="grid-label">For Alex</p>
+                                    <p className="grid-date-display">14 · 07 · 2000</p>
                                     <div className="grid-display">
-                                        {[30, 3, 20, 7, 8, 19, 0, 33, 1, 32, 9, 18, 21, 6, 31, 2].map((num, i) => (
-                                            <div key={i} className="grid-cell">{num < 10 ? `0${num}` : num}</div>
+                                        {[14, 7, 20, 0, 1, 19, 11, 10, 9, 12, 8, 13, 17, 3, 2, 18].map((num, i) => (
+                                            <div key={i} className={`grid-cell ${i < 4 ? 'highlight-row' : ''}`}>
+                                                {num < 10 ? `0${num}` : num}
+                                            </div>
                                         ))}
                                     </div>
                                     <p className="grid-message">
                                         Every number in this grid is from the day you were born.
-                                        Here&apos;s to another year filled with tiny, magical moments.
+                                        Here's to another year filled with tiny, magical moments. 🎉
                                     </p>
                                 </div>
                                 <p className="preview-footer-note">
-                                    Change the date, recipient name, and message to instantly
-                                    generate a new grid.
+                                    💡 The first row shows the birthday date: 14 · 07 · 20 · 00
                                 </p>
                             </div>
                         </div>
@@ -200,15 +221,6 @@ const LandingPage = () => {
                     </div>
                 </section>
             </main>
-
-            {/* Footer */}
-            <footer className="home-footer">
-                <div className="footer-container">
-                    <p>
-                        © {new Date().getFullYear()} Wishyfi. Made for meaningful wishes.
-                    </p>
-                </div>
-            </footer>
         </div>
     );
 };

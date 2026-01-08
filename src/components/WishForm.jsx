@@ -9,12 +9,21 @@ const WishForm = () => {
     const location = useLocation();
     const initialData = location.state?.wishData || location.state?.sampleData || null;
 
+    // Get today's date in DD/MM/YYYY format
+    const getTodayDate = () => {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
+
     const [formData, setFormData] = useState({
         occasion: initialData?.occasion || 'birthday',
         customOccasion: initialData?.customOccasion || '',
         recipientName: initialData?.recipientName || '',
         senderName: initialData?.senderName || '',
-        date: initialData?.date || '', // Prefilled date is now stable
+        date: initialData?.date || getTodayDate(), // Prepopulate with today's date
         message: initialData?.message || '',
         colorHighlight: initialData?.colorHighlight || '#667eea',
         colorBg: initialData?.colorBg || '#ffffff',
@@ -72,6 +81,27 @@ const WishForm = () => {
         }
     };
 
+    // Validate date format and value
+    const validateDate = (dateString) => {
+        if (!dateString) {
+            return 'Please select a date';
+        }
+
+        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+        if (!dateRegex.test(dateString)) {
+            return 'Date must be in DD/MM/YYYY format';
+        }
+
+        const [d, m, y] = dateString.split('/').map(Number);
+        const dt = new Date(y, m - 1, d);
+
+        if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) {
+            return 'Please enter a valid real date';
+        }
+
+        return '';
+    };
+
     const validateForm = () => {
         const newErrors = {};
 
@@ -83,19 +113,9 @@ const WishForm = () => {
             newErrors.senderName = 'Please enter your name';
         }
 
-        if (!formData.date) {
-            newErrors.date = 'Please select a date';
-        } else {
-            const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (!dateRegex.test(formData.date)) {
-                newErrors.date = 'Date must be in DD/MM/YYYY format';
-            } else {
-                const [d, m, y] = formData.date.split('/').map(Number);
-                const dt = new Date(y, m - 1, d);
-                if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) {
-                    newErrors.date = 'Please enter a valid real date';
-                }
-            }
+        const dateError = validateDate(formData.date);
+        if (dateError) {
+            newErrors.date = dateError;
         }
 
         if (!formData.message.trim()) {
@@ -147,7 +167,22 @@ const WishForm = () => {
         }));
         setIsDateMetaEdited(true);
 
-        if (errors.date) {
+        // Instant validation - validate as user types
+        if (value.length === 10) {
+            const dateError = validateDate(value);
+            if (dateError) {
+                setErrors(prev => ({
+                    ...prev,
+                    date: dateError
+                }));
+            } else {
+                setErrors(prev => ({
+                    ...prev,
+                    date: ''
+                }));
+            }
+        } else if (errors.date) {
+            // Clear error if user is still typing
             setErrors(prev => ({
                 ...prev,
                 date: ''
