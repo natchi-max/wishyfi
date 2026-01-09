@@ -32,8 +32,8 @@ export const router = createBrowserRouter([
         element: <DigitalGreetingAnimation />
       },
       {
-        path: 'cinematic-x',
-        element: <CinematicXAnimation />
+        path: 'animation/:wishId?',
+        element: <MagicSquareAnimation />
       },
       {
         path: 'ramanujan-x',

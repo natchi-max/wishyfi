@@ -30,13 +30,9 @@ export async function shareGifFile(gifBlob, wishData, message = '') {
         // Prepare share data
         const shareData = {
             files: [file],
-            title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`
+            title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
+            text: message // This will include the wish link
         };
-
-        // Add message if provided
-        if (message) {
-            shareData.text = message;
-        }
 
         console.log('Sharing GIF file:', filename, 'Size:', gifBlob.size, 'bytes');
 

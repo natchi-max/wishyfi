@@ -131,7 +131,7 @@ const WishForm = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (validateForm()) {
-            navigate('/animate', { state: { wishData: formData } });
+            navigate('/animation', { state: { wishData: formData } });
         }
     };
 
@@ -430,79 +430,36 @@ const WishForm = () => {
 
                         <div className="date-input-container">
                             <input
-                                type="text"
+                                type="date"
                                 id="date"
                                 name="date"
-                                value={formData.date}
-                                onChange={handleDateInputChange}
-                                onFocus={() => setShowDateDropdown(true)}
-                                placeholder="30/03/2007"
-                                maxLength="10"
-                                className={errors.date ? 'error' : ''}
+                                value={(() => {
+                                    // Convert DD/MM/YYYY to YYYY-MM-DD for date input
+                                    const parts = formData.date.split('/');
+                                    if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+                                        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                    }
+                                    // Fallback to today's date in YYYY-MM-DD format
+                                    return new Date().toISOString().split('T')[0];
+                                })()}
+                                onChange={(e) => {
+                                    // Convert YYYY-MM-DD to DD/MM/YYYY
+                                    const dateValue = e.target.value;
+                                    if (dateValue) {
+                                        const [year, month, day] = dateValue.split('-');
+                                        const formattedDate = `${day}/${month}/${year}`;
+                                        setFormData(prev => ({ ...prev, date: formattedDate }));
+                                        setIsDateMetaEdited(true);
+                                        // Clear error when user changes date
+                                        if (errors.date) {
+                                            setErrors(prev => ({ ...prev, date: '' }));
+                                        }
+                                    }
+                                }}
+                                className={errors.date ? 'error date-picker' : 'date-picker'}
+                                max={new Date().toISOString().split('T')[0]}
+                                required
                             />
-                            <button
-                                type="button"
-                                className="date-dropdown-btn"
-                                onClick={() => setShowDateDropdown(!showDateDropdown)}
-                            >
-                                📅
-                            </button>
-
-                            {showDateDropdown && (
-                                <div className="date-dropdown-panel">
-                                    <select
-                                        value={formData.date.split('/')[0] || ''}
-                                        onChange={(e) => {
-                                            const day = e.target.value;
-                                            const parts = formData.date.split('/');
-                                            const newDate = `${day.padStart(2, '0')}/${parts[1] || '01'}/${parts[2] || new Date().getFullYear()}`;
-                                            setFormData(prev => ({ ...prev, date: newDate }));
-                                        }}
-                                        className="date-select-small"
-                                    >
-                                        <option value="">Day</option>
-                                        {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                                            <option key={day} value={day}>{day}</option>
-                                        ))}
-                                    </select>
-
-                                    <select
-                                        value={formData.date.split('/')[1] || ''}
-                                        onChange={(e) => {
-                                            const month = e.target.value;
-                                            const parts = formData.date.split('/');
-                                            const newDate = `${parts[0] || '01'}/${month.padStart(2, '0')}/${parts[2] || new Date().getFullYear()}`;
-                                            setFormData(prev => ({ ...prev, date: newDate }));
-                                        }}
-                                        className="date-select-small"
-                                    >
-                                        <option value="">Month</option>
-                                        {[
-                                            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-                                        ].map((month, i) => (
-                                            <option key={i + 1} value={i + 1}>{month}</option>
-                                        ))}
-                                    </select>
-
-                                    <select
-                                        value={formData.date.split('/')[2] || ''}
-                                        onChange={(e) => {
-                                            const year = e.target.value;
-                                            const parts = formData.date.split('/');
-                                            const newDate = `${parts[0] || ''}/${parts[1] || ''}/${year}`;
-                                            setFormData(prev => ({ ...prev, date: newDate }));
-                                            setShowDateDropdown(false);
-                                        }}
-                                        className="date-select-small"
-                                    >
-                                        <option value="">Year</option>
-                                        {Array.from({ length: 50 }, (_, i) => 2024 - i).map(year => (
-                                            <option key={year} value={year}>{year}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
                         </div>
 
                         {errors.date && (

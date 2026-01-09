@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WishyFi Magic Square - Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+        }
+        .test-info {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        .test-links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .test-link {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+        .test-link:hover {
+            transform: translateY(-2px);
+        }
+        .current-date {
+            font-size: 1.2em;
+            color: #667eea;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>🎯 WishyFi Magic Square Test</h1>
+        <p>Test the new CinematicXAnimation component with automatic current date</p>
+        <div class="current-date" id="currentDate"></div>
+        <p>The animation will use today's date automatically if no user input is provided</p>
+    </div>
+
+    <div class="test-links">
+        <a href="/cinematic-x" class="test-link">🎬 Test Animation (Current Date)</a>
+        <a href="/create" class="test-link">📝 Create Custom Wish</a>
+        <a href="/" class="test-link">🏠 Home</a>
+    </div>
+
+    <script>
+        // Display current date
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        const currentDate = `${dd}/${mm}/${yyyy}`;
+        
+        document.getElementById('currentDate').textContent = `Today's Date: ${currentDate}`;
+    </script>
+</body>
+</html>

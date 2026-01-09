@@ -1,326 +1,512 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import gsap from 'gsap';
-import { createAnimatedGif, downloadBlob } from '../utils/gifGenerator';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './CinematicXAnimation.css';
+import { parseDateComponents, generateDateEchoSquare } from '../utils/magicSquare';
+import { generateCelebrationImage } from '../utils/imageGenerator';
 
-const CinematicXAnimation = ({
-    initialPrimaryColor = '#00f2ff',
-    initialSecondaryColor = '#ff00ea',
-    initialLineThickness = 4,
-    initialShowParticles = true,
-    initialDuration = 4, // seconds
-    width = 800,
-    height = 800
-}) => {
+const CinematicXAnimation = ({ wishData: propWishData }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const wishData = propWishData || location.state?.wishData;
+    const isSharedView = location.pathname.startsWith('/share/');
+
     const canvasRef = useRef(null);
-    const containerRef = useRef(null);
-    const [isGeneratingGif, setIsGeneratingGif] = useState(false);
-    const [isRecordingMp4, setIsRecordingMp4] = useState(false);
+    const backgroundImageRef = useRef(null);
+    const [currentScreen, setCurrentScreen] = useState(0);
+    const [bgImageLoaded, setBgImageLoaded] = useState(false);
+    const animationFrameRef = useRef(null);
+    const startTimeRef = useRef(null);
 
-    // UI State
-    const [primaryColor, setPrimaryColor] = useState(initialPrimaryColor);
-    const [secondaryColor, setSecondaryColor] = useState(initialSecondaryColor);
-    const [lineThickness, setLineThickness] = useState(initialLineThickness);
-    const [showParticles, setShowParticles] = useState(initialShowParticles);
-    const [duration, setDuration] = useState(initialDuration);
-
-    // Animation state
-    const state = useRef({
-        progress: 0,
-        particles: [],
-        lastUpdateTime: 0
-    });
-
-    const particlesRef = useRef([]);
-
-    // Initialize particles
-    const createParticle = (x, y, color) => ({
-        x,
-        y,
-        vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4,
-        life: 1.0,
-        color,
-        size: Math.random() * 3 + 1
-    });
-
-    const updateParticles = (ctx, head1, head2) => {
-        if (!showParticles) {
-            particlesRef.current = [];
-            return;
+    // Redirect if no data in shared view
+    useEffect(() => {
+        if (!wishData && isSharedView) {
+            navigate('/create');
         }
+    }, [wishData, navigate, isSharedView]);
 
-        // Add particles at heads
-        if (state.current.progress > 0.05 && state.current.progress < 0.95) {
-            for (let i = 0; i < 3; i++) {
-                particlesRef.current.push(createParticle(head1.x, head1.y, primaryColor));
-                particlesRef.current.push(createParticle(head2.x, head2.y, secondaryColor));
+    // Load background image
+    useEffect(() => {
+        const loadBgImage = async () => {
+            if (wishData) {
+                try {
+                    const imageDataUrl = await generateCelebrationImage(wishData);
+                    if (imageDataUrl) {
+                        const img = new Image();
+                        img.onload = () => {
+                            backgroundImageRef.current = img;
+                            setBgImageLoaded(true);
+                        };
+                        img.onerror = () => {
+                            console.error('Failed to load background image');
+                            setBgImageLoaded(false);
+                        };
+                        img.src = imageDataUrl;
+                    }
+                } catch (error) {
+                    console.error('Error loading celebration image:', error);
+                }
             }
-        }
+        };
+        loadBgImage();
+    }, [wishData]);
 
-        // Update and draw particles
-        ctx.save();
-        for (let i = particlesRef.current.length - 1; i >= 0; i--) {
-            const p = particlesRef.current[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vx *= 0.98; // Friction
-            p.vy *= 0.98;
-            p.life -= 0.02;
+    // Default wish data
+    const getCurrentDate = () => {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
 
-            if (p.life <= 0) {
-                particlesRef.current.splice(i, 1);
+    const defaultWishData = {
+        recipientName: 'Friend',
+        senderName: 'Someone Special',
+        date: getCurrentDate(),
+        message: 'Wishing you joy and happiness!',
+        occasion: 'celebration',
+        colorHighlight: '#667eea',
+        colorBg: '#0a0e27'
+    };
+
+    const currentWishData = wishData || defaultWishData;
+    const dateStr = currentWishData.date || getCurrentDate();
+
+    // Generate magic square
+    const { DD, MM, CC, YY } = parseDateComponents(dateStr);
+    const square = generateDateEchoSquare(DD, MM, CC, YY);
+    const magicConstant = square && square[0] ? square[0].reduce((a, b) => a + b, 0) : 0;
+
+    // Animation timeline (in milliseconds)
+    const TIMELINE = {
+        SCREEN_1: { start: 0, duration: 4000 },        // 4s - Intro text
+        SCREEN_2: { start: 4000, duration: 2500 },     // 2.5s - Transition pause
+        SCREEN_3: { start: 6500, duration: 3000 },     // 3s - Block colors
+        SCREEN_4: { start: 9500, duration: 1500 },     // 1.5s - Row transformation
+        SCREEN_5: { start: 11000, duration: 2500 },    // 2.5s - Top row focus
+        FINAL: { start: 13500, duration: 4000 }        // 4s - Greeting reveal
+    };
+
+    const TOTAL_DURATION = 17500; // Total animation duration
+
+    // Animation loop
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const size = 800;
+        canvas.width = size;
+        canvas.height = size;
+
+        const animate = (timestamp) => {
+            if (!startTimeRef.current) {
+                startTimeRef.current = timestamp;
+            }
+
+            const elapsed = timestamp - startTimeRef.current;
+            const progress = Math.min(elapsed / TOTAL_DURATION, 1);
+
+            // Determine current screen
+            let screen = 0;
+            if (elapsed >= TIMELINE.FINAL.start) screen = 5;
+            else if (elapsed >= TIMELINE.SCREEN_5.start) screen = 4;
+            else if (elapsed >= TIMELINE.SCREEN_4.start) screen = 3;
+            else if (elapsed >= TIMELINE.SCREEN_3.start) screen = 2;
+            else if (elapsed >= TIMELINE.SCREEN_2.start) screen = 1;
+
+            setCurrentScreen(screen);
+
+            // Clear canvas
+            ctx.fillStyle = currentWishData.colorBg;
+            ctx.fillRect(0, 0, size, size);
+
+            // Render current screen
+            renderScreen(ctx, screen, elapsed, size);
+
+            // Loop animation
+            if (progress < 1) {
+                animationFrameRef.current = requestAnimationFrame(animate);
             } else {
-                ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.color;
-                ctx.shadowBlur = 5;
-                ctx.shadowColor = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
+                // Restart animation
+                startTimeRef.current = null;
+                animationFrameRef.current = requestAnimationFrame(animate);
+            }
+        };
+
+        animationFrameRef.current = requestAnimationFrame(animate);
+
+        return () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+        };
+    }, [currentWishData, square, bgImageLoaded]);
+
+    // Render screen based on timeline
+    const renderScreen = (ctx, screen, elapsed, size) => {
+        const highlightColor = currentWishData.colorHighlight;
+
+        switch (screen) {
+            case 0: // SCREEN 1 - Intro Text
+                renderScreen1(ctx, elapsed, size, highlightColor);
+                break;
+            case 1: // SCREEN 2 - Transition Pause
+                renderScreen2(ctx, elapsed, size);
+                break;
+            case 2: // SCREEN 3 - Block Colors
+                renderScreen3(ctx, elapsed, size, highlightColor);
+                break;
+            case 3: // SCREEN 4 - Row Transformation
+                renderScreen4(ctx, elapsed, size, highlightColor);
+                break;
+            case 4: // SCREEN 5 - Top Row Focus
+                renderScreen5(ctx, elapsed, size, highlightColor);
+                break;
+            case 5: // FINAL SCREEN - Greeting
+                renderFinalScreen(ctx, elapsed, size, highlightColor);
+                break;
+        }
+    };
+
+    // SCREEN 1 - Intro Text
+    const renderScreen1 = (ctx, elapsed, size, highlightColor) => {
+        const localElapsed = elapsed - TIMELINE.SCREEN_1.start;
+        const recipientName = currentWishData.recipientName || 'there';
+
+        const lines = [
+            { text: `Hi ${recipientName}`, delay: 0, y: size / 2 - 60 },
+            { text: 'This is not random', delay: 500, y: size / 2 },
+            { text: 'Watch closely', delay: 1000, y: size / 2 + 60 }
+        ];
+
+        ctx.font = 'bold 36px Poppins, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        lines.forEach(line => {
+            if (localElapsed >= line.delay) {
+                const lineProgress = Math.min((localElapsed - line.delay) / 500, 1);
+                const opacity = easeInOut(lineProgress);
+                const translateY = (1 - easeInOut(lineProgress)) * 10;
+
+                ctx.save();
+                ctx.globalAlpha = opacity;
+
+                // Text shadow for visibility
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                ctx.shadowBlur = 20;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+
+                // Stroke for contrast
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.lineWidth = 3;
+                ctx.strokeText(line.text, size / 2, line.y - translateY);
+
+                // Fill text
+                ctx.fillStyle = line.delay === 0 ? highlightColor : '#ffffff';
+                ctx.fillText(line.text, size / 2, line.y - translateY);
+
+                ctx.restore();
+            }
+        });
+    };
+
+    // SCREEN 2 - Transition Pause
+    const renderScreen2 = (ctx, elapsed, size) => {
+        const localElapsed = elapsed - TIMELINE.SCREEN_2.start;
+        const progress = localElapsed / TIMELINE.SCREEN_2.duration;
+
+        // Shifting gradient
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        const hue = (progress * 60) % 360;
+        gradient.addColorStop(0, `hsl(${hue}, 50%, 10%)`);
+        gradient.addColorStop(1, `hsl(${(hue + 60) % 360}, 50%, 15%)`);
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+    };
+
+    // SCREEN 3 - Block Colors
+    const renderScreen3 = (ctx, elapsed, size, highlightColor) => {
+        const localElapsed = elapsed - TIMELINE.SCREEN_3.start;
+        const gridSize = 400;
+        const cellSize = gridSize / 4;
+        const startX = (size - gridSize) / 2;
+        const startY = (size - gridSize) / 2;
+
+        // Grid fade in
+        const gridFade = Math.min(localElapsed / 500, 1);
+
+        // Block colors (X-diagonal symmetry)
+        const blockColors = [
+            '#ff6b6b', // Top-left
+            '#4ecdc4', // Top-right
+            '#4ecdc4', // Bottom-left
+            '#ff6b6b'  // Bottom-right
+        ];
+
+        // Draw grid and numbers
+        for (let ri = 0; ri < 4; ri++) {
+            for (let ci = 0; ci < 4; ci++) {
+                const x = startX + ci * cellSize;
+                const y = startY + ri * cellSize;
+
+                // Determine block (0-3)
+                const blockIndex = Math.floor(ri / 2) * 2 + Math.floor(ci / 2);
+                const blockDelay = blockIndex * 300;
+                const blockProgress = Math.max(0, Math.min((localElapsed - 500 - blockDelay) / 400, 1));
+
+                // Background color
+                if (blockProgress > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = easeInOut(blockProgress) * 0.4 * gridFade;
+                    ctx.fillStyle = blockColors[blockIndex];
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                    ctx.restore();
+                }
+
+                // Grid lines
+                ctx.save();
+                ctx.globalAlpha = gridFade;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, cellSize, cellSize);
+                ctx.restore();
+
+                // Numbers
+                ctx.save();
+                ctx.globalAlpha = gridFade;
+                ctx.font = 'bold 32px Poppins, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                ctx.shadowBlur = 10;
+
+                ctx.fillStyle = '#ffffff';
+                const num = square && square[ri] && square[ri][ci] !== undefined ? square[ri][ci] : 0;
+                const numStr = num < 10 ? `0${num}` : `${num}`;
+                ctx.fillText(numStr, x + cellSize / 2, y + cellSize / 2);
+                ctx.restore();
             }
         }
+    };
+
+    // SCREEN 4 - Row Transformation
+    const renderScreen4 = (ctx, elapsed, size, highlightColor) => {
+        const localElapsed = elapsed - TIMELINE.SCREEN_4.start;
+        const progress = easeInOut(Math.min(localElapsed / TIMELINE.SCREEN_4.duration, 1));
+
+        const gridSize = 400;
+        const cellSize = gridSize / 4;
+        const startX = (size - gridSize) / 2;
+        const startY = (size - gridSize) / 2;
+
+        const blockColors = ['#ff6b6b', '#4ecdc4', '#4ecdc4', '#ff6b6b'];
+        const rowColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
+
+        for (let ri = 0; ri < 4; ri++) {
+            for (let ci = 0; ci < 4; ci++) {
+                const x = startX + ci * cellSize;
+                const y = startY + ri * cellSize;
+
+                const blockIndex = Math.floor(ri / 2) * 2 + Math.floor(ci / 2);
+                const fromColor = blockColors[blockIndex];
+                const toColor = rowColors[ri];
+
+                // Interpolate colors
+                const color = interpolateColor(fromColor, toColor, progress);
+
+                // Background
+                ctx.save();
+                ctx.globalAlpha = 0.4;
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, cellSize, cellSize);
+                ctx.restore();
+
+                // Grid lines
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, cellSize, cellSize);
+
+                // Numbers
+                ctx.save();
+                ctx.font = 'bold 32px Poppins, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ffffff';
+                const num = square && square[ri] && square[ri][ci] !== undefined ? square[ri][ci] : 0;
+                const numStr = num < 10 ? `0${num}` : `${num}`;
+                ctx.fillText(numStr, x + cellSize / 2, y + cellSize / 2);
+                ctx.restore();
+            }
+        }
+    };
+
+    // SCREEN 5 - Top Row Focus
+    const renderScreen5 = (ctx, elapsed, size, highlightColor) => {
+        const localElapsed = elapsed - TIMELINE.SCREEN_5.start;
+        const pulseProgress = (Math.sin(localElapsed / 400 * Math.PI) + 1) / 2; // Slow pulse
+
+        const gridSize = 400;
+        const cellSize = gridSize / 4;
+        const startX = (size - gridSize) / 2;
+        const startY = (size - gridSize) / 2;
+
+        const rowColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
+
+        for (let ri = 0; ri < 4; ri++) {
+            for (let ci = 0; ci < 4; ci++) {
+                const x = startX + ci * cellSize;
+                const y = startY + ri * cellSize;
+                const isTopRow = ri === 0;
+
+                // Background
+                ctx.save();
+                const baseOpacity = 0.4;
+                const glowOpacity = isTopRow ? baseOpacity + (pulseProgress * 0.3) : baseOpacity;
+                ctx.globalAlpha = glowOpacity;
+                ctx.fillStyle = rowColors[ri];
+                ctx.fillRect(x, y, cellSize, cellSize);
+                ctx.restore();
+
+                // Soft glow on top row
+                if (isTopRow) {
+                    ctx.save();
+                    ctx.globalAlpha = pulseProgress * 0.5;
+                    ctx.shadowColor = highlightColor;
+                    ctx.shadowBlur = 30;
+                    ctx.fillStyle = highlightColor;
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                    ctx.restore();
+                }
+
+                // Grid lines
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, cellSize, cellSize);
+
+                // Numbers
+                ctx.save();
+                ctx.font = 'bold 32px Poppins, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ffffff';
+                const num = square && square[ri] && square[ri][ci] !== undefined ? square[ri][ci] : 0;
+                const numStr = num < 10 ? `0${num}` : `${num}`;
+                ctx.fillText(numStr, x + cellSize / 2, y + cellSize / 2);
+                ctx.restore();
+            }
+        }
+    };
+
+    // FINAL SCREEN - Greeting
+    const renderFinalScreen = (ctx, elapsed, size, highlightColor) => {
+        const localElapsed = elapsed - TIMELINE.FINAL.start;
+        const fadeProgress = easeInOut(Math.min(localElapsed / 1000, 1));
+        const scaleProgress = 0.98 + (easeInOut(Math.min(localElapsed / 1000, 1)) * 0.02);
+
+        // Background image
+        if (backgroundImageRef.current) {
+            ctx.save();
+            ctx.globalAlpha = fadeProgress * 0.7;
+            ctx.drawImage(backgroundImageRef.current, 0, 0, size, size);
+            ctx.restore();
+        }
+
+        // Dark overlay for text contrast
+        ctx.save();
+        ctx.globalAlpha = fadeProgress * 0.6;
+        const gradient = ctx.createLinearGradient(0, 0, 0, size);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+        ctx.restore();
+
+        // Greeting message
+        const message = currentWishData.message || 'Wishing you joy and happiness!';
+        const senderName = currentWishData.senderName || 'Someone Special';
+        const recipientName = currentWishData.recipientName || 'Friend';
+
+        ctx.save();
+        ctx.globalAlpha = fadeProgress;
+        ctx.translate(size / 2, size / 2);
+        ctx.scale(scaleProgress, scaleProgress);
+
+        // Recipient
+        ctx.font = 'bold 28px Poppins, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+        ctx.shadowBlur = 20;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(`To: ${recipientName}`, 0, -100);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`To: ${recipientName}`, 0, -100);
+
+        // Message
+        ctx.font = '24px Poppins, sans-serif';
+        ctx.strokeText(message, 0, -20);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(message, 0, -20);
+
+        // From
+        ctx.font = 'italic 22px Poppins, sans-serif';
+        ctx.strokeText('From,', 0, 60);
+        ctx.fillStyle = highlightColor;
+        ctx.fillText('From,', 0, 60);
+
+        ctx.font = 'bold 26px Poppins, sans-serif';
+        ctx.strokeText(senderName, 0, 100);
+        ctx.fillStyle = highlightColor;
+        ctx.fillText(senderName, 0, 100);
+
         ctx.restore();
     };
 
-    const renderFrame = (ctx, t, totalT = 1) => {
-        const p = t / totalT;
-        // Easing: ease-in-out quint
-        const easedP = p < 0.5
-            ? 16 * p * p * p * p * p
-            : 1 - Math.pow(-2 * p + 2, 5) / 2;
+    // Easing function
+    const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-        // Clear
-        ctx.fillStyle = '#050505';
-        ctx.fillRect(0, 0, width, height);
-
-        // Background subtle gradient
-        const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width / 2);
-        bgGrad.addColorStop(0, '#0a0a0f');
-        bgGrad.addColorStop(1, '#050505');
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, width, height);
-
-        // Grid lines (subtle)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (let x = 0; x <= width; x += width / 10) {
-            ctx.moveTo(x, 0); ctx.lineTo(x, height);
-        }
-        for (let y = 0; y <= height; y += height / 10) {
-            ctx.moveTo(0, y); ctx.lineTo(width, y);
-        }
-        ctx.stroke();
-
-        // Line 1: Top-left to Bottom-right
-        const x1_start = 50, y1_start = 50;
-        const x1_end = width - 50, y1_end = height - 50;
-        const x1_current = x1_start + (x1_end - x1_start) * easedP;
-        const y1_current = y1_start + (y1_end - y1_start) * easedP;
-
-        // Line 2: Top-right to Bottom-left
-        const x2_start = width - 50, y2_start = 50;
-        const x2_end = 50, y2_end = height - 50;
-        const x2_current = x2_start + (x2_end - x2_start) * easedP;
-        const y2_current = y2_start + (y2_end - y2_start) * easedP;
-
-        // Glow effect
-        ctx.shadowBlur = 15;
-        ctx.lineWidth = lineThickness;
-        ctx.lineCap = 'round';
-
-        // Draw Line 1
-        ctx.shadowColor = primaryColor;
-        ctx.strokeStyle = primaryColor;
-        ctx.beginPath();
-        ctx.moveTo(x1_start, y1_start);
-        ctx.lineTo(x1_current, y1_current);
-        ctx.stroke();
-
-        // Draw Line 2
-        ctx.shadowColor = secondaryColor;
-        ctx.strokeStyle = secondaryColor;
-        ctx.beginPath();
-        ctx.moveTo(x2_start, y2_start);
-        ctx.lineTo(x2_current, y2_current);
-        ctx.stroke();
-
-        // Intersection Glow (Center is at 0.5)
-        const intersectionDist = Math.abs(easedP - 0.5);
-        if (intersectionDist < 0.15) {
-            const intensity = (0.15 - intersectionDist) / 0.15;
-            ctx.shadowBlur = 40 * intensity;
-            ctx.shadowColor = '#ffffff';
-            ctx.fillStyle = '#ffffff';
-            ctx.globalAlpha = intensity;
-            ctx.beginPath();
-            ctx.arc(width / 2, height / 2, lineThickness * 2.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Outer glow ring
-            ctx.strokeStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(width / 2, height / 2, lineThickness * (4 + intensity * 10), 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.globalAlpha = 1.0;
-        }
-
-        updateParticles(ctx, { x: x1_current, y: y1_current }, { x: x2_current, y: y2_current });
+    // Color interpolation
+    const interpolateColor = (color1, color2, progress) => {
+        const c1 = hexToRgb(color1);
+        const c2 = hexToRgb(color2);
+        const r = Math.round(c1.r + (c2.r - c1.r) * progress);
+        const g = Math.round(c1.g + (c2.g - c1.g) * progress);
+        const b = Math.round(c1.b + (c2.b - c1.b) * progress);
+        return `rgb(${r}, ${g}, ${b})`;
     };
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        let anim;
-
-        const loop = (time) => {
-            const elapsed = (time / 1000) % duration;
-            const p = elapsed / duration;
-            state.current.progress = p;
-            renderFrame(ctx, p, 1);
-            anim = requestAnimationFrame(loop);
-        };
-
-        anim = requestAnimationFrame(loop);
-        return () => cancelAnimationFrame(anim);
-    }, [duration, primaryColor, secondaryColor, lineThickness, showParticles, width, height]);
-
-    const handleExportGif = async () => {
-        setIsGeneratingGif(true);
-        // Clear particles for a clean start
-        particlesRef.current = [];
-
-        try {
-            const frames = 60;
-            const fps = 20; // 20 fps for 3 seconds = 60 frames
-            const delay = 1000 / fps;
-
-            const blob = await createAnimatedGif(
-                (ctx, frameIndex, totalFrames) => {
-                    renderFrame(ctx, frameIndex, totalFrames);
-                },
-                width,
-                height,
-                frames,
-                delay,
-                (p) => console.log(`Export progress: ${p}%`)
-            );
-
-            downloadBlob(blob, 'cinematic-x.gif');
-        } catch (error) {
-            console.error('GIF Export failed:', error);
-            alert('GIF export failed. Check console for details.');
-        } finally {
-            setIsGeneratingGif(false);
-        }
+    const hexToRgb = (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 0, b: 0 };
     };
 
-    const handleRecordMp4 = () => {
-        setIsRecordingMp4(true);
-        const canvas = canvasRef.current;
-        const stream = canvas.captureStream(60); // 60 FPS
-        const recorder = new MediaRecorder(stream, {
-            mimeType: 'video/webm;codecs=vp9',
-            videoBitsPerSecond: 5000000 // 5Mbps high quality
-        });
-
-        const chunks = [];
-        recorder.ondataavailable = (e) => chunks.push(e.data);
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'cinematic-x.webm';
-            a.click();
-            setIsRecordingMp4(false);
-        };
-
-        // Record for exactly one loop
-        recorder.start();
-        setTimeout(() => {
-            recorder.stop();
-        }, duration * 1000);
+    const handleBack = () => {
+        navigate('/create', { state: { wishData: currentWishData } });
     };
 
     return (
-        <div className="cinematic-x-container" ref={containerRef}>
-            <div className="animation-wrapper">
-                <canvas
-                    ref={canvasRef}
-                    width={width}
-                    height={height}
-                    className="cinematic-canvas"
-                />
-            </div>
+        <div className="cinematic-animation-page">
+            <div className="animation-container">
+                <canvas ref={canvasRef} className="animation-canvas" />
 
-            <div className="controls-panel">
-                <h3>Cinematic X Editor</h3>
-
-                <div className="control-group">
-                    <label>Primary Color</label>
-                    <input
-                        type="color"
-                        value={primaryColor}
-                        onChange={(e) => setPrimaryColor(e.target.value)}
-                    />
-                </div>
-
-                <div className="control-group">
-                    <label>Secondary Color</label>
-                    <input
-                        type="color"
-                        value={secondaryColor}
-                        onChange={(e) => setSecondaryColor(e.target.value)}
-                    />
-                </div>
-
-                <div className="control-group">
-                    <label>Line Thickness ({lineThickness}px)</label>
-                    <input
-                        type="range"
-                        min="1" max="25"
-                        value={lineThickness}
-                        onChange={(e) => setLineThickness(parseInt(e.target.value))}
-                    />
-                </div>
-
-                <div className="control-group">
-                    <label>Cycle Duration ({duration}s)</label>
-                    <input
-                        type="range"
-                        min="1" max="10"
-                        value={duration}
-                        onChange={(e) => setDuration(parseFloat(e.target.value))}
-                        step="0.5"
-                    />
-                </div>
-
-                <div className="control-group">
-                    <label>Light Particles</label>
-                    <input
-                        type="checkbox"
-                        checked={showParticles}
-                        onChange={(e) => setShowParticles(e.target.checked)}
-                    />
-                </div>
-
-                <div className="button-group">
-                    <button
-                        className="export-button gif"
-                        onClick={handleExportGif}
-                        disabled={isGeneratingGif || isRecordingMp4}
-                    >
-                        {isGeneratingGif ? 'Generating GIF...' : 'Export GIF'}
-                    </button>
-                    <button
-                        className="export-button mp4"
-                        onClick={handleRecordMp4}
-                        disabled={isGeneratingGif || isRecordingMp4}
-                    >
-                        {isRecordingMp4 ? 'Recording...' : 'Record MP4 (WebM)'}
+                <div className="animation-controls">
+                    <button onClick={handleBack} className="btn-back">
+                        ← Edit Wish
                     </button>
                 </div>
             </div>

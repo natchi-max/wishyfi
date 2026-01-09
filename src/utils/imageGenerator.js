@@ -140,6 +140,103 @@ const FESTIVAL_IMAGES = {
     forevermoment: '/images/festivals/forevermoment.png'
 };
 
+// Smart fallback mappings - Use existing images for missing occasions
+const FALLBACK_MAPPINGS = {
+    // Love & Relationship → Use anniversary/proposal/celebration
+    'valentinesday': 'anniversary',
+    'promiseday': 'proposal',
+    'roseday': 'anniversary',
+    'chocolateday': 'celebration',
+    'hugday': 'anniversary',
+    'kissday': 'anniversary',
+    'coupleday': 'anniversary',
+    'loveday': 'anniversary',
+    'friendshipday': 'celebration',
+    'bestfriendday': 'celebration',
+    'love': 'anniversary',
+
+    // Major Holidays → Use celebration/christmas
+    'easter': 'celebration',
+    'goodfriday': 'celebration',
+
+    // Indian Festivals → Use similar existing festivals
+    'dussehra': 'navratri',
+    'janmashtami': 'ganeshchaturthi',
+    'mahashivaratri': 'ganeshchaturthi',
+    'vasantpanchami': 'pongal',
+    'lohri': 'pongal',
+    'baisakhi': 'pongal',
+    'karwachauth': 'rakshabandhan',
+    'bhaidooj': 'rakshabandhan',
+    'chhathpuja': 'pongal',
+    'makarsankranti': 'pongal',
+
+    // Islamic Festivals → Use eid
+    'ramadan': 'eid',
+    'eidmilad': 'eid',
+    'bakrid': 'eid',
+
+    // National & Awareness Days → Use celebration/achievement
+    'independenceday': 'celebration',
+    'republicday': 'celebration',
+    'gandhijayanti': 'celebration',
+    'teachersday': 'graduation',
+    'childrensday': 'celebration',
+    'womensday': 'celebration',
+    'mensday': 'celebration',
+    'environmentday': 'celebration',
+    'yogaday': 'celebration',
+    'healthday': 'celebration',
+    'peaceday': 'celebration',
+    'humanrightsday': 'celebration',
+    'constitutionday': 'celebration',
+
+    // Education & Career → Use graduation/achievement/firstjob
+    'resultday': 'achievement',
+    'examsuccess': 'achievement',
+    'convocation': 'graduation',
+    'orientationday': 'graduation',
+    'internshipcompletion': 'achievement',
+    'projectcompletion': 'achievement',
+    'startuplaunch': 'firstjob',
+    'applaunch': 'firstjob',
+    'websitelaunch': 'firstjob',
+
+    // Digital & Creative → Use achievement/firstjob/celebration
+    'gamelaunch': 'achievement',
+    'hackathonday': 'achievement',
+    'codingday': 'achievement',
+    'designshowcase': 'achievement',
+    'aiproject': 'achievement',
+    'milestone': 'achievement',
+    'followerscelebration': 'celebration',
+    'creatorday': 'achievement',
+    'innovationday': 'achievement',
+
+    // Emotional & Meaningful → Use celebration/specialmoment
+    'gratitudeday': 'specialmoment',
+    'thankyouday': 'specialmoment',
+    'apologyday': 'specialmoment',
+    'motivationday': 'achievement',
+    'selfloveday': 'specialmoment',
+    'hopeday': 'specialmoment',
+    'tributeday': 'memoryday',
+    'memorialday': 'memoryday',
+    'inspirationday': 'achievement',
+
+    // Unique Occasions → Use specialmoment/celebration/dreamcometrue
+    'luckyday': 'celebration',
+    'destinyday': 'dreamcometrue',
+    'firstmeet': 'specialmoment',
+    'lastday': 'memoryday',
+    'goldenmoment': 'specialmoment',
+    'silentday': 'specialmoment',
+    'unforgettableday': 'specialmoment',
+    'magicday': 'celebration',
+    'surpriseday': 'celebration',
+    'forevermoment': 'specialmoment'
+};
+
 // Keyword mappings for flexible matching
 const KEYWORD_MAPPINGS = {
     // Festivals
@@ -194,17 +291,33 @@ const KEYWORD_MAPPINGS = {
 };
 
 async function loadFestivalImage(occasion, customOccasion) {
+
     // 1. Try primary key match
     if (FESTIVAL_IMAGES[occasion]) {
         const img = await tryLoadImage(FESTIVAL_IMAGES[occasion]);
-        if (img) return img;
+        if (img) {
+            return img;
+        }
     }
 
-    // 2. Search within custom occasion text
-    const text = (customOccasion || occasion || '').toLowerCase().trim();
-    if (!text) return null;
+    // 2. Try fallback mapping for missing images
+    if (FALLBACK_MAPPINGS[occasion]) {
+        const fallbackKey = FALLBACK_MAPPINGS[occasion];
+        if (FESTIVAL_IMAGES[fallbackKey]) {
+            const img = await tryLoadImage(FESTIVAL_IMAGES[fallbackKey]);
+            if (img) {
+                return img;
+            }
+        }
+    }
 
-    // 3. Check keyword mappings first (more specific matches)
+    // 3. Search within custom occasion text
+    const text = (customOccasion || occasion || '').toLowerCase().trim();
+    if (!text) {
+        return await tryLoadImage(FESTIVAL_IMAGES['celebration']);
+    }
+
+    // 4. Check keyword mappings first (more specific matches)
     for (const [keyword, target] of Object.entries(KEYWORD_MAPPINGS)) {
         if (text.includes(keyword) && FESTIVAL_IMAGES[target]) {
             const img = await tryLoadImage(FESTIVAL_IMAGES[target]);
@@ -212,7 +325,7 @@ async function loadFestivalImage(occasion, customOccasion) {
         }
     }
 
-    // 4. Direct key match in text
+    // 5. Direct key match in text
     for (const [key, path] of Object.entries(FESTIVAL_IMAGES)) {
         if (text.includes(key)) {
             const img = await tryLoadImage(path);
@@ -220,16 +333,25 @@ async function loadFestivalImage(occasion, customOccasion) {
         }
     }
 
-    return null;
+    // Final fallback - use 'celebration' image
+    return await tryLoadImage(FESTIVAL_IMAGES['celebration']);
 }
 
 async function tryLoadImage(src) {
-    if (!src) return null;
+    if (!src) {
+        return null;
+    }
+
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
+        img.onload = () => {
+            resolve(img);
+        };
+        img.onerror = () => {
+            // Silently fail - fallback will be used
+            resolve(null);
+        };
         img.src = src;
     });
 }

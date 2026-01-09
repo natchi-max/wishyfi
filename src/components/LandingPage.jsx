@@ -88,7 +88,7 @@ const LandingPage = () => {
                                 Turn any date into a <span className="highlight-underline">personalized wish grid</span>.
                             </h1>
                             <p className="hero-description">
-                                Wishyfi creates unique greetings from dates. Type a birthday or
+                                WishyFi creates unique greetings from dates. Type a birthday or
                                 special occasion, get a beautiful number grid, and share it
                                 instantly with friends and family.
                             </p>
@@ -135,42 +135,6 @@ const LandingPage = () => {
                                 </div>
                                 <p className="preview-footer-note">
                                     💡 The first row shows the birthday date: 14 · 07 · 20 · 00
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* How it works */}
-                <section id="how-it-works" className="how-it-works">
-                    <div className="section-container">
-                        <h2 className="section-title">How Wishyfi works</h2>
-                        <p className="section-subtitle">
-                            Turn any date into a shareable greeting in three quick steps.
-                        </p>
-
-                        <div className="steps-grid">
-                            <div className="step-card">
-                                <p className="step-number">1 · Pick a date</p>
-                                <p className="step-title">Enter a birthday or special occasion.</p>
-                                <p className="step-desc">
-                                    Wishyfi converts the date into a clean numeric grid.
-                                </p>
-                            </div>
-
-                            <div className="step-card">
-                                <p className="step-number">2 · Personalize</p>
-                                <p className="step-title">Add names and a short message.</p>
-                                <p className="step-desc">
-                                    Choose layout, colors, and occasion style.
-                                </p>
-                            </div>
-
-                            <div className="step-card">
-                                <p className="step-number">3 · Share</p>
-                                <p className="step-title">Download or share a link.</p>
-                                <p className="step-desc">
-                                    Send it over WhatsApp, email, or social media in one tap.
                                 </p>
                             </div>
                         </div>
