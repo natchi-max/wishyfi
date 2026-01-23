@@ -43,6 +43,15 @@ const LandingPage = () => {
         };
     }, []);
 
+    // Set page title for Landing Page only
+    useEffect(() => {
+        const originalTitle = document.title;
+        document.title = "Some days are special. Some memories come only once.";
+        return () => {
+            document.title = originalTitle;
+        };
+    }, []);
+
     const handleStartToday = () => {
         const today = new Date();
         const dd = String(today.getDate()).padStart(2, '0');
@@ -70,6 +79,37 @@ const LandingPage = () => {
                 }
             }
         });
+    };
+
+    const handleExampleClick = (type) => {
+        let sampleData = {};
+
+        switch (type) {
+            case 'Anniversary':
+                sampleData = {
+                    date: '14/02/2020',
+                    occasion: 'anniversary',
+                    recipientName: 'My Love'
+                };
+                break;
+            case 'holidays':
+                sampleData = {
+                    date: '25/12/2024',
+                    occasion: 'holiday',
+                    recipientName: 'Everyone'
+                };
+                break;
+            case 'Birthday':
+            default:
+                sampleData = {
+                    date: '14/07/2000',
+                    recipientName: 'Alex',
+                    occasion: 'birthday'
+                };
+                break;
+        }
+
+        navigate('/create', { state: { sampleData } });
     };
 
     return (
@@ -122,7 +162,7 @@ const LandingPage = () => {
                                     <p className="grid-label">For Alex</p>
                                     <p className="grid-date-display">14 · 07 · 2000</p>
                                     <div className="grid-display">
-                                        {[14, 7, 20, 0, 1, 19, 11, 10, 9, 12, 8, 13, 17, 3, 2, 18].map((num, i) => (
+                                        {[14, 7, 20, 0, 1, 19, 11, 10, 9, 12, 8, 12, 17, 3, 2, 19].map((num, i) => (
                                             <div key={i} className={`grid-cell ${i < 4 ? 'highlight-row' : ''}`}>
                                                 {num < 10 ? `0${num}` : num}
                                             </div>
@@ -154,14 +194,17 @@ const LandingPage = () => {
                                 {
                                     title: "Birthday",
                                     subtitle: "Make their date of birth the hero.",
+                                    key: "Birthday"
                                 },
                                 {
                                     title: "Anniversary",
                                     subtitle: "Celebrate the day it all began.",
+                                    key: "Anniversary"
                                 },
                                 {
-                                    title: "New Year & holidays",
+                                    title: "holidays",
                                     subtitle: "Turn 01·01 or 12·25 into art.",
+                                    key: "holidays"
                                 },
                             ].map((card) => (
                                 <div
@@ -175,9 +218,17 @@ const LandingPage = () => {
                                         </p>
                                     </div>
                                     <div className="mini-grid">
-                                        {[14, 7, 20, 0, 1, 19, 11, 9, 10, 8, 13, 11, 17, 12, 4, 11].map((num, i) => (
+                                        {[14, 7, 20, 0, 1, 19, 11, 10, 9, 12, 8, 12, 17, 3, 2, 19].map((num, i) => (
                                             <div key={i} className="mini-grid-cell">{num < 10 ? `0${num}` : num}</div>
                                         ))}
+                                    </div>
+                                    <div className="example-card-action">
+                                        <button
+                                            className="btn-example-try"
+                                            onClick={() => handleExampleClick(card.key)}
+                                        >
+                                            Try This
+                                        </button>
                                     </div>
                                 </div>
                             ))}

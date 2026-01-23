@@ -453,6 +453,7 @@
     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
+/* Slowed down from 15s to 30s */
 .preview-grid-box::before {
     content: '';
     position: absolute;
@@ -461,7 +462,7 @@
     width: 200%;
     height: 200%;
     background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent);
-    animation: rotate 15s linear infinite;
+    animation: rotate 30s linear infinite;
 }
 
 @keyframes rotate {
@@ -520,10 +521,11 @@
     transform: scale(1.05);
 }
 
+/* Slowed down from 2s to 4s */
 .grid-cell.highlight-row {
     background: rgba(236, 72, 153, 0.4);
     border: 2px solid rgba(236, 72, 153, 0.6);
-    animation: pulse 2s ease-in-out infinite;
+    animation: pulse 4s ease-in-out infinite;
 }
 
 @keyframes pulse {
@@ -766,7 +768,7 @@
     color: #667eea;
     font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
+    cursor: default;
 }
 
 .mini-grid-cell:hover {
@@ -774,4 +776,34 @@
     transform: scale(1.15) rotate(5deg);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     z-index: 10;
+}
+
+.example-card-action {
+    margin-top: 1.25rem;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+.btn-example-try {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-example-try:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.btn-example-try:active {
+    transform: translateY(0);
 }
