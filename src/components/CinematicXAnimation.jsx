@@ -77,17 +77,17 @@ const CinematicXAnimation = ({ wishData: propWishData }) => {
     const square = generateDateEchoSquare(DD, MM, CC, YY);
     const magicConstant = square && square[0] ? square[0].reduce((a, b) => a + b, 0) : 0;
 
-    // Animation timeline (in milliseconds)
+    // Animation timeline (in milliseconds) - Slowed down significantly
     const TIMELINE = {
-        SCREEN_1: { start: 0, duration: 4000 },        // 4s - Intro text
-        SCREEN_2: { start: 4000, duration: 2500 },     // 2.5s - Transition pause
-        SCREEN_3: { start: 6500, duration: 3000 },     // 3s - Block colors
-        SCREEN_4: { start: 9500, duration: 1500 },     // 1.5s - Row transformation
-        SCREEN_5: { start: 11000, duration: 2500 },    // 2.5s - Top row focus
-        FINAL: { start: 13500, duration: 4000 }        // 4s - Greeting reveal
+        SCREEN_1: { start: 0, duration: 8000 },        // 8s - Intro text (doubled)
+        SCREEN_2: { start: 8000, duration: 5000 },     // 5s - Transition pause (doubled)
+        SCREEN_3: { start: 13000, duration: 6000 },    // 6s - Block colors (doubled)
+        SCREEN_4: { start: 19000, duration: 3000 },    // 3s - Row transformation (doubled)
+        SCREEN_5: { start: 22000, duration: 5000 },    // 5s - Top row focus (doubled)
+        FINAL: { start: 27000, duration: 8000 }        // 8s - Greeting reveal (doubled)
     };
 
-    const TOTAL_DURATION = 17500; // Total animation duration
+    const TOTAL_DURATION = 35000; // Total animation duration (doubled)
 
     // Animation loop
     useEffect(() => {
