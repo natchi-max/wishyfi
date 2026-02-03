@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import RamanujanDemo from './RamanujanDemo';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -112,6 +113,17 @@ const LandingPage = () => {
         navigate('/create', { state: { sampleData } });
     };
 
+    const handleWishAnimation = () => {
+        navigate('/wish-animation', {
+            state: {
+                wishData: {
+                    recipientName: 'Alex',
+                    occasion: 'birthday'
+                }
+            }
+        });
+    };
+
     return (
         <div className="home-root">
 
@@ -144,6 +156,13 @@ const LandingPage = () => {
                                     className="btn-sample"
                                 >
                                     Try a sample birthday →
+                                </button>
+                                <button
+                                    onClick={handleWishAnimation}
+                                    className="btn-sample"
+                                    style={{ color: '#ec4899' }}
+                                >
+                                    See Animation ✨
                                 </button>
                             </div>
                             <p className="hero-footer-note">
@@ -233,6 +252,17 @@ const LandingPage = () => {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                </section>
+
+                {/* Ramanujan Demo */}
+                <section id="how-it-works" className="construction-section">
+                    <div className="section-container">
+                        <h2 className="section-title">How the Magic Works</h2>
+                        <p className="section-subtitle">
+                            Watch how any date becomes a perfect magic square using Ramanujan's mathematical formula
+                        </p>
+                        <RamanujanDemo />
                     </div>
                 </section>
             </main>

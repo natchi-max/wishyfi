@@ -113,9 +113,9 @@ export async function createAnimatedGif(renderFrame, width, height, totalFrames,
             // Timeout safety (increased for larger GIFs)
             const renderTimeout = setTimeout(() => {
                 if (!renderingComplete) {
-                    reject(new Error('GIF generation timed out after 90 seconds'));
+                    reject(new Error('GIF generation timed out after 300 seconds'));
                 }
-            }, 90000); // 90 second timeout
+            }, 300000); // 300 second timeout
 
             gif.on('finished', () => {
                 clearTimeout(renderTimeout);

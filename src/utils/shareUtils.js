@@ -21,34 +21,40 @@ export async function shareGifFile(gifBlob, wishData, message = '') {
     });
 
     // Check if Web Share API Level 2 (files) is supported
-    if (!navigator.canShare || !navigator.canShare({ files: [file] })) {
-        console.log('File sharing not supported, falling back to download');
-        return false; // Fallback needed
-    }
-
-    try {
-        // Prepare share data
-        const shareData = {
-            files: [file],
-            title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
-            text: message // This will include the wish link
-        };
-
-        console.log('Sharing GIF file:', filename, 'Size:', gifBlob.size, 'bytes');
-
-        // Share the actual file
-        await navigator.share(shareData);
-        console.log('GIF file shared successfully');
-        return true;
-
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('Share cancelled by user');
-            return true; // Not an error, user cancelled
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({
+                files: [file],
+                title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
+                text: message
+            });
+            console.log('GIF file shared successfully');
+            return true;
+        } catch (error) {
+            if (error.name === 'AbortError') return true;
+            console.warn('File sharing failed, trying text fallback...');
         }
-        console.error('File share failed:', error);
-        throw error;
     }
+
+    // Fallback: Share Text/Link only (if file share not supported or failed)
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
+                text: message,
+                url: window.location.href
+            });
+            console.log('Link shared successfully');
+            return true;
+        } catch (error) {
+            if (error.name === 'AbortError') return true;
+            console.error('Text sharing failed:', error);
+        }
+    }
+
+    console.log('Native sharing not supported');
+    return false;
+
 }
 
 /**

@@ -3,9 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './MagicSquareAnimation.css';
 import { parseDateComponents, generateDateEchoSquare } from '../utils/magicSquare';
 import { createAnimatedGif, downloadBlob } from '../utils/gifGenerator';
-import { shareGifFile, downloadGifWithInstructions, showSharingInstructions, getShareSupport } from '../utils/shareUtils';
-import { LoadingSpinner, ProgressBar } from './LoadingComponents';
+import { createAnimatedVideo, downloadVideoBlob, isVideoRecordingSupported } from '../utils/videoGenerator';
+import { shareGifFile, downloadGifWithInstructions, getShareSupport } from '../utils/shareUtils';
+import { ProgressBar } from './LoadingComponents';
 import TinyColor from 'tinycolor2';
+
+import { getOccasionImage } from '../utils/imageFallback';
 
 // Helper to format numbers as two digits (e.g., 7 -> "07", 1 -> "01")
 const formatTwoDigit = (num) => {
@@ -24,20 +27,30 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [bgImage, setBgImage] = useState(null);
-    const [showGift, setShowGift] = useState(isSharedView); // Show gift reveal only for recipients
-    const [isOpening, setIsOpening] = useState(false);
-    const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
-    const [shareableLink, setShareableLink] = useState('');
-    const confettiRef = useRef([]); // To store confetti particles
-    const auraRef = useRef([]); // To store aura particles
-    const crackersRef = useRef([]); // To store firework/crackers particles during square reveal
+    const [showGift, setShowGift] = useState(isSharedView);
+    const imgRef = useRef(new Image());
 
-    // GIF & sharing state
+    // Load background image
+    useEffect(() => {
+        if (wishData?.occasion) {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => setBgImage(img);
+            img.onerror = () => setBgImage(null);
+            img.src = getOccasionImage(wishData.occasion);
+        }
+    }, [wishData?.occasion]);
+
+    // GIF & Video sharing state
     const [gifBlob, setGifBlob] = useState(null);
+    const [videoBlob, setVideoBlob] = useState(null);
     const [gifProgress, setGifProgress] = useState(0);
+    const [videoProgress, setVideoProgress] = useState(0);
     const [linkCopied, setLinkCopied] = useState(false);
     const [shareSupport, setShareSupport] = useState(null);
     const [isSharing, setIsSharing] = useState(false);
+    const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+    const [videoSupported, setVideoSupported] = useState(false);
 
     // Redirect if no wish data
     useEffect(() => {
@@ -46,28 +59,11 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         }
     }, [wishData, navigate, isSharedView]);
 
-    // Generate shareable link
-    useEffect(() => {
-        if (wishData) {
-            const encoded = encodeWishData(wishData);
-            const link = `${window.location.origin}/share/${encoded}`;
-            setShareableLink(link);
-        }
-    }, [wishData]);
-
-    // Check share support on mount
+    // Check share support and video support on mount
     useEffect(() => {
         setShareSupport(getShareSupport());
+        setVideoSupported(isVideoRecordingSupported());
     }, []);
-
-    // Utility to encode wish data (Safe for UTF-8)
-    function encodeWishData(data) {
-        const json = JSON.stringify(data);
-        const encoded = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (match, p1) => {
-            return String.fromCharCode('0x' + p1);
-        }));
-        return encoded;
-    }
 
     const handleBack = () => {
         navigate('/create', { state: { wishData } });
@@ -81,26 +77,18 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         return null;
     }
 
-    // Initialize AI Image
-    useEffect(() => {
-        if (wishData) {
-            import('../utils/imageGenerator').then(async (mod) => {
-                try {
-                    const imgUrl = await mod.generateCelebrationImage(wishData);
-                    setBgImage(imgUrl);
-                } catch (error) {
-                    console.log('Image generation not available:', error);
-                }
-            }).catch(() => {
-                console.log('Image generator module not found');
-            });
-        }
-    }, [wishData]);
-
     // Calculate Square using Date Echo Logic
-    const dateStr = wishData?.date || '30/03/2007';
+    const dateStr = wishData?.date;
+    if (!dateStr) {
+        return <div>No date provided</div>;
+    }
+
     const { DD, MM, CC, YY } = parseDateComponents(dateStr);
     const { square, magicConstant } = generateDateEchoSquare(DD, MM, CC, YY);
+
+    // For display purposes, we want the first row to show the original date components
+    const displaySquare = [...square];
+    displaySquare[0] = [DD, MM, CC, YY]; // Always show original date in first row
 
     const size = 800; // Increased resolution
     const padding = 100;
@@ -112,15 +100,10 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     const highlightColor = wishData?.colorHighlight || '#667eea';
     const bgColor = wishData?.colorBg || '#ffffff';
 
-    // Total duration: ~32 seconds on screen (30% slower than before)
-    const totalFrames = 1950;
+    // Total duration: 25 seconds
+    const totalFrames = 750; // 30 FPS for 25 seconds
 
-    const imgRef = useRef(new Image());
-    useEffect(() => {
-        if (bgImage) {
-            imgRef.current.src = bgImage;
-        }
-    }, [bgImage]);
+
 
     const drawGrid = useCallback((ctx, opacity = 1) => {
         const isLt = TinyColor(bgColor).isLight();
@@ -166,7 +149,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
         const drawCell = (ri, ci, opacity, color = null, bold = false) => {
             if (opacity <= 0) return;
-            const val = square[ri][ci];
+            const val = displaySquare[ri][ci];
             const x = startX + ci * cellSize + cellSize / 2;
             const y = startY + ri * cellSize + cellSize / 2;
 
@@ -287,20 +270,28 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
             drawGrid(ctx, fade);
 
-            // Highlight Screen: First Row (The Date) stays glowing
+            // Show the magic square values (including first row as [DD, MM, YY1, YY2])
             for (let ri = 0; ri < 4; ri++) {
                 for (let ci = 0; ci < 4; ci++) {
                     const cellIndex = ri * 4 + ci;
                     const delay = ri === 0 ? 0 : 0.1 + (cellIndex * 0.03);
                     const cellFade = Math.max(0, Math.min(1, (p - delay) / 0.15));
 
-                    // All cells appear the same - no special highlighting
-                    drawCell(ri, ci, cellFade * fade, null, false);
+                    if (ri === 0) {
+                        // First row shows the parsed date components [DD, MM, YY1, YY2]
+                        drawCell(ri, ci, cellFade * fade, highlightColor, true);
+                    } else {
+                        // Other rows show calculated magic square values
+                        drawCell(ri, ci, cellFade * fade, null, false);
+                    }
                 }
             }
 
             // Title - The Foundation
             if (p > 0.3) {
+                const actualDate = wishData?.date;
+                const displayDate = actualDate ? `${actualDate}` : 'Your Date';
+
                 ctx.save();
                 ctx.globalAlpha = ((p - 0.3) / 0.7) * fade;
                 ctx.fillStyle = highlightColor;
@@ -308,7 +299,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
                 ctx.shadowColor = highlightColor;
                 ctx.shadowBlur = 15;
-                ctx.fillText(`Your magic square`, startX + gridSize / 2, startY - 35);
+                ctx.fillText(`Your special date: ${displayDate}`, startX + gridSize / 2, startY - 35);
                 ctx.restore();
             }
 
@@ -465,46 +456,64 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 5: ROW COLORING (0.56 - 0.70) ═══════════════════
+        // ═══════════════════ SCREEN 5: COLOR GROUPING - SAME NUMBERS SAME COLORS (0.56 - 0.70) ═══════════════════
         else if (progress >= 0.56 && progress < 0.70) {
             const p = (progress - 0.56) / 0.14;
             const fade = smoothFade(p, 0.15, 0.85);
 
             drawGrid(ctx, 1);
 
-            const rowColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
+            // Get unique values and assign colors
+            const uniqueValues = [...new Set(displaySquare.flat())].sort((a, b) => a - b);
+            const colors = ['#ff4444', '#4444ff', '#44ff44', '#44ffff', '#ff44ff', '#ffff44', '#ff8844', '#8844ff'];
 
-            // Animate row by row from top to bottom
-            for (let ri = 0; ri < 4; ri++) {
-                const rowDelay = ri * 0.22;
-                const rowP = Math.max(0, Math.min(1, (p - rowDelay) / 0.25));
+            // Create value to color mapping
+            const valueColorMap = {};
+            uniqueValues.forEach((value, index) => {
+                valueColorMap[value] = colors[index % colors.length];
+            });
 
-                if (rowP > 0) {
-                    const rowFade = easeInOut(rowP);
-                    drawRowBg(ri, rowFade, rowColors[ri]);
+            // Show all cells with their colors simultaneously after initial delay
+            if (p > 0.2) {
+                const showFade = Math.min(1, (p - 0.2) / 0.3);
 
+                for (let ri = 0; ri < 4; ri++) {
                     for (let ci = 0; ci < 4; ci++) {
-                        drawCell(ri, ci, rowFade * fade, rowColors[ri], rowP > 0.5);
+                        const value = displaySquare[ri][ci];
+                        const color = valueColorMap[value];
+
+                        // Draw colored background
+                        ctx.save();
+                        ctx.globalAlpha = showFade * fade * 0.8;
+                        ctx.fillStyle = color;
+                        ctx.fillRect(startX + ci * cellSize, startY + ri * cellSize, cellSize, cellSize);
+                        ctx.restore();
+
+                        // Draw cell with white text
+                        drawCell(ri, ci, showFade * fade, '#ffffff', true);
                     }
-                } else {
-                    // Not yet animated rows appear dimmed
+                }
+            } else {
+                // Initial fade in of all cells
+                const initialFade = p / 0.2;
+                for (let ri = 0; ri < 4; ri++) {
                     for (let ci = 0; ci < 4; ci++) {
-                        drawCell(ri, ci, 0.25 * fade, null, false);
+                        drawCell(ri, ci, initialFade * fade * 0.3, null, false);
                     }
                 }
             }
 
             // Title
-            if (p > 0.2) {
+            if (p > 0.1) {
                 ctx.save();
-                ctx.globalAlpha = Math.min(1, (p - 0.2) / 0.3) * fade;
+                ctx.globalAlpha = Math.min(1, (p - 0.1) / 0.3) * fade;
                 ctx.fillStyle = highlightColor;
                 ctx.textAlign = 'center';
                 ctx.font = `bold ${cellSize * 0.25}px 'Poppins', sans-serif`;
-                ctx.fillText(`All rows sum to ${magicConstant}`, startX + gridSize / 2, startY - 35);
+                ctx.fillText(`Same numbers, same colors`, startX + gridSize / 2, startY - 35);
 
                 // Add wishyfi.com
-                ctx.globalAlpha = Math.min(1, (p - 0.2) / 0.3) * fade * 0.7;
+                ctx.globalAlpha = Math.min(1, (p - 0.1) / 0.3) * fade * 0.7;
                 ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
                 ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
                 ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
@@ -512,7 +521,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 6: ROW EMPHASIS - ONCE EACH (0.70 - 0.82) ═══════════════════
+        // ═══════════════════ SCREEN 6: ALL ROWS + ALL COLUMNS (0.70 - 0.82) ═══════════════════
         else if (progress >= 0.70 && progress < 0.82) {
             const p = (progress - 0.70) / 0.12;
             const fade = smoothFade(p, 0.15, 0.85);
@@ -520,26 +529,50 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             drawGrid(ctx, 1);
 
             const rowColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
+            const colColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
 
-            // Each row lights up once in sequence
-            for (let ri = 0; ri < 4; ri++) {
-                const rowStart = ri * 0.25; // Each row takes 25% of screen time
-                const rowEnd = rowStart + 0.25;
+            // First half: All 4 rows animate in sequence
+            if (p < 0.5) {
+                const rowPhase = p / 0.5;
 
-                let intensity;
-                if (p < rowStart) {
-                    intensity = 0.3; // Not yet
-                } else if (p < rowEnd) {
-                    const rowP = (p - rowStart) / 0.25;
-                    intensity = 0.3 + 0.7 * Math.sin(rowP * Math.PI); // Fade in and out
-                } else {
-                    intensity = 0.5; // After highlight, stay semi-bright
+                for (let ri = 0; ri < 4; ri++) {
+                    const rowDelay = ri * 0.1;
+                    const rowP = Math.max(0, Math.min(1, (rowPhase - rowDelay) / 0.2));
+
+                    if (rowP > 0) {
+                        const rowFade = easeInOut(rowP);
+                        drawRowBg(ri, rowFade, rowColors[ri]);
+
+                        for (let ci = 0; ci < 4; ci++) {
+                            drawCell(ri, ci, rowFade * fade, rowColors[ri], rowP > 0.5);
+                        }
+                    } else {
+                        for (let ci = 0; ci < 4; ci++) {
+                            drawCell(ri, ci, 0.25 * fade, null, false);
+                        }
+                    }
                 }
-
-                drawRowBg(ri, intensity * fade, rowColors[ri]);
+            }
+            // Second half: All 4 columns animate in sequence
+            else {
+                const colPhase = (p - 0.5) / 0.5;
 
                 for (let ci = 0; ci < 4; ci++) {
-                    drawCell(ri, ci, intensity * fade, rowColors[ri], p >= rowStart && p < rowEnd);
+                    const colDelay = ci * 0.1;
+                    const colP = Math.max(0, Math.min(1, (colPhase - colDelay) / 0.2));
+
+                    if (colP > 0) {
+                        const colFade = easeInOut(colP);
+                        drawColBg(ci, colFade, colColors[ci]);
+
+                        for (let ri = 0; ri < 4; ri++) {
+                            drawCell(ri, ci, colFade * fade, colColors[ci], colP > 0.5);
+                        }
+                    } else {
+                        for (let ri = 0; ri < 4; ri++) {
+                            drawCell(ri, ci, 0.25 * fade, null, false);
+                        }
+                    }
                 }
             }
 
@@ -549,7 +582,8 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.fillStyle = highlightColor;
             ctx.textAlign = 'center';
             ctx.font = `bold ${cellSize * 0.2}px 'Poppins', sans-serif`;
-            ctx.fillText('Every Row Sums to ' + magicConstant, startX + gridSize / 2, startY - 35);
+            const title = p < 0.5 ? `All rows sum to ${magicConstant}` : `All columns sum to ${magicConstant}`;
+            ctx.fillText(title, startX + gridSize / 2, startY - 35);
 
             // Add wishyfi.com
             ctx.globalAlpha = fade * 0.7;
@@ -564,270 +598,110 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             const p = (progress - 0.82) / 0.18;
             const fade = Math.min(1, p / 0.2);
 
-            // Background image with elegant gradient overlay
-            if (imgRef.current && imgRef.current.complete) {
+            // Background image or gradient
+            if (bgImage) {
                 ctx.save();
                 ctx.globalAlpha = fade;
-                ctx.drawImage(imgRef.current, 0, 0, size, size);
+                ctx.drawImage(bgImage, 0, 0, size, size);
 
-                // Darker gradient for better text readability
-                const grad = ctx.createLinearGradient(0, size * 0.25, 0, size);
-                grad.addColorStop(0, 'rgba(0,0,0,0)');
-                grad.addColorStop(0.5, 'rgba(0,0,0,0.65)');
-                grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+                // Dark overlay for text readability
+                const grad = ctx.createLinearGradient(0, 0, 0, size);
+                grad.addColorStop(0, 'rgba(0,0,0,0.3)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.7)');
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, size, size);
                 ctx.restore();
+            } else {
+                // Fallback gradient
+                const grad = ctx.createLinearGradient(0, 0, 0, size);
+                grad.addColorStop(0, highlightColor);
+                grad.addColorStop(1, TinyColor(highlightColor).darken(30).toString());
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, size, size);
             }
 
             ctx.save();
             ctx.globalAlpha = fade;
             ctx.textAlign = 'center';
-            ctx.shadowColor = 'rgba(0,0,0,0.7)';
-            ctx.shadowBlur = 10;
-
-            // 1. Recipient at top
-            ctx.fillStyle = highlightColor;
-            ctx.font = `bold ${size * 0.04}px 'Poppins', sans-serif`;
-            ctx.shadowColor = highlightColor;
-            ctx.shadowBlur = 15;
-            ctx.fillText(`To: ${wishData?.recipientName || 'Someone Special'}`, size / 2, size * 0.25);
-
-            // 2. Occasion greeting
             ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(0,0,0,0.7)';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
             ctx.shadowBlur = 10;
-            ctx.font = `bold ${size * 0.085}px 'Dancing Script', cursive`;
-            const displayOccasion = wishData?.occasion === 'other'
-                ? wishData?.customOccasion || 'Celebration'
-                : wishData?.occasion || 'Celebration';
-            ctx.fillText(
-                `Happy ${displayOccasion.charAt(0).toUpperCase() + displayOccasion.slice(1)}!`,
-                size / 2,
-                size * 0.38
-            );
 
-            // 3. Main message
-            ctx.font = `italic ${size * 0.038}px 'Playfair Display', serif`;
+            // Title
+            ctx.font = `bold ${size * 0.09}px 'Dancing Script', cursive`;
+            ctx.fillText(`Happy ${(wishData?.occasion || 'celebration').charAt(0).toUpperCase() + (wishData?.occasion || 'celebration').slice(1)}!`, size / 2, size * 0.25);
+
+            // Floating Emoji Particles (Deterministic)
+            const emojis = ['✨', '💖', '⭐', '🎈', '🎉'];
+            const particleCount = 20;
+
+            for (let i = 0; i < particleCount; i++) {
+                // Deterministic pseudo-random based on index
+                const seed = i * 1337;
+                const speed = 0.5 + ((seed % 100) / 100);
+
+                // Position based on time (p)
+                const yOffset = (p * 500 * speed + seed) % (size + 100) - 50;
+                const x = (seed % size);
+                const y = size - yOffset; // Move upwards
+
+                // Wiggle
+                const xWiggle = Math.sin(p * 10 + i) * 20;
+
+                const emoji = emojis[i % emojis.length];
+                const fontSize = 20 + (seed % 20);
+
+                ctx.font = `${fontSize}px Arial`;
+                ctx.fillText(emoji, x + xWiggle, y);
+            }
+
+            // Recipient
+            ctx.font = `${size * 0.04}px 'Inter', sans-serif`;
+            ctx.fillText(`For ${wishData?.recipientName || 'You'}`, size / 2, size * 0.35);
+
+            // Message with word wrapping
+            ctx.font = `${size * 0.03}px 'Inter', sans-serif`;
             const message = wishData?.message || 'A special wish for you';
-            const lines = message.split('\n');
-            lines.forEach((line, i) => {
-                ctx.fillText(line, size / 2, size * 0.52 + i * 38);
-            });
+            const words = message.split(' ');
+            let line = '';
+            let y = size * 0.5;
 
-            // 4. Date in words format
-            const dateInWords = (() => {
-                const dateStr = wishData?.date || '01/01/2000';
-                const parts = dateStr.split('/');
-                if (parts.length === 3) {
-                    const day = parseInt(parts[0], 10);
-                    const month = parseInt(parts[1], 10);
-                    const year = parts[2];
-                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    return `${monthNames[month - 1]} ${day}, ${year}`;
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > size * 0.8 && n > 0) {
+                    ctx.fillText(line, size / 2, y);
+                    line = words[n] + ' ';
+                    y += size * 0.05;
+                } else {
+                    line = testLine;
                 }
-                return dateStr;
-            })();
+            }
+            ctx.fillText(line, size / 2, y);
 
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.font = `${size * 0.028}px 'Poppins', sans-serif`;
-            ctx.fillText(dateInWords, size / 2, size * 0.73);
+            // Date
+            ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+            ctx.fillText(wishData?.date || '', size / 2, size * 0.75);
 
-            // 5. Sender signature
+            // Sender
             if (wishData?.senderName) {
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowColor = 'rgba(0,0,0,0.7)';
-                ctx.shadowBlur = 8;
-                ctx.font = `italic ${size * 0.032}px 'Poppins', sans-serif`;
-                ctx.fillText(`— From ${wishData.senderName}`, size / 2, size * 0.82);
+                ctx.font = `italic ${size * 0.025}px 'Inter', sans-serif`;
+                ctx.fillText(`— From ${wishData.senderName}`, size / 2, size * 0.85);
             }
 
-            // 6. Branding
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            ctx.font = `${size * 0.022}px 'Inter', sans-serif`;
-            ctx.fillText('wishyfi.com', size / 2, size * 0.93);
+            // Branding
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = `${size * 0.02}px 'Inter', sans-serif`;
+            ctx.fillText('wishyfi.com', size / 2, size * 0.95);
 
             ctx.restore();
-
-            // Subtle floating particles for emotion
-            if (fade > 0.4) {
-                ctx.save();
-                const seed = (wishData?.recipientName?.length || 5) + (wishData?.date?.length || 10);
-                for (let i = 0; i < 12; i++) {
-                    const ps = seed + i;
-                    const x = ((Math.sin(ps * 1.3) + 1) / 2) * size + Math.sin(progress * 2.5 + ps) * 35;
-                    const y = ((Math.cos(ps * 1.9) + 1) / 2) * size - (p * 80) + Math.cos(progress * 2 + ps) * 25;
-                    const particleFade = Math.min(0.5, fade * 0.6) * Math.max(0, 1 - (p - 0.85) * 5);
-                    ctx.globalAlpha = particleFade;
-                    ctx.font = `${size * 0.035}px serif`;
-                    const emojis = ['✨', '💖', '⭐', '🎈'];
-                    ctx.fillText(emojis[ps % emojis.length], x, y);
-                }
-                ctx.restore();
-            }
         }
 
-        // Interactive effects (mouse trail, confetti)
-        renderInteractions(ctx, size, mousePos, auraRef, confettiRef, crackersRef, progress);
+        // Interactive effects removed for simplicity
 
-    }, [square, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData, mousePos]);
+    }, [displaySquare, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData]);
 
-    // Helper to trigger multi-colored firework burst
-    const triggerCracker = (ref, x, y, baseColor) => {
-        const particleCount = 45; // More dense
-        for (let i = 0; i < particleCount; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const velocity = 3 + Math.random() * 10;
-            const hue = Math.random() * 360; // Every particle a new color
-            ref.current.push({
-                x, y,
-                vx: Math.cos(angle) * velocity,
-                vy: Math.sin(angle) * velocity,
-                life: 1.0 + Math.random() * 0.5, // Varied life
-                r: Math.random() * 4 + 1.5,
-                color: `hsl(${hue}, 100%, 65%)`
-            });
-        }
-    };
 
-    // Helper for interactive elements
-    const renderInteractions = (ctx, size, mouse, aura, confetti, crackers, progress) => {
-        // Trigger crackers at multiple key animation moments
-        const crackerTriggers = [
-            { start: 0.14, end: 0.16, x: size / 2, y: size / 2 },      // After intro
-            { start: 0.26, end: 0.28, x: size * 0.3, y: size * 0.3 },  // Start of X animation
-            { start: 0.35, end: 0.37, x: size * 0.7, y: size * 0.7 },  // Middle of X animation
-            { start: 0.42, end: 0.44, x: size / 2, y: size * 0.3 },    // Start of blocks
-            { start: 0.56, end: 0.58, x: size * 0.2, y: size / 2 },    // Start of rows
-            { start: 0.70, end: 0.72, x: size * 0.8, y: size / 2 },    // Row emphasis
-            { start: 0.82, end: 0.85, x: size / 2, y: size * 0.4 },    // Final greeting - big burst
-        ];
-
-        crackerTriggers.forEach(trigger => {
-            if (progress > trigger.start && progress < trigger.end) {
-                // Only trigger once per burst
-                const triggerId = `cracker_${trigger.start}`;
-                if (!crackers.current.triggered) crackers.current.triggered = {};
-                if (!crackers.current.triggered[triggerId]) {
-                    crackers.current.triggered[triggerId] = true;
-                    const particleCount = trigger.start === 0.82 ? 80 : 45; // More particles for final burst
-                    for (let i = 0; i < particleCount; i++) {
-                        const angle = Math.random() * Math.PI * 2;
-                        const velocity = 3 + Math.random() * 10;
-                        const hue = Math.random() * 360;
-                        crackers.current.push({
-                            x: trigger.x,
-                            y: trigger.y,
-                            vx: Math.cos(angle) * velocity,
-                            vy: Math.sin(angle) * velocity,
-                            life: 1.0 + Math.random() * 0.5,
-                            r: Math.random() * 4 + 1.5,
-                            color: `hsl(${hue}, 100%, 65%)`
-                        });
-                    }
-                }
-            }
-        });
-
-        // Render crackers (Fireworks)
-        crackers.current.forEach((p, i) => {
-            if (typeof p === 'object' && p.x !== undefined) {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += 0.12; // Gravity
-                p.life -= 0.018;
-                if (p.life <= 0) {
-                    crackers.current.splice(i, 1);
-                    return;
-                }
-
-                ctx.save();
-                ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.color;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
-        });
-
-        // Magic Aura (Mouse Follow)
-        if (mouse.x > 0) {
-            if (aura.current.length < 20) {
-                aura.current.push({
-                    x: mouse.x,
-                    y: mouse.y,
-                    r: Math.random() * 4 + 2,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: (Math.random() - 0.5) * 2,
-                    life: 1.0,
-                    color: highlightColor
-                });
-            }
-        }
-
-        aura.current.forEach((p, i) => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life -= 0.02;
-            if (p.life <= 0) aura.current.splice(i, 1);
-
-            ctx.save();
-            ctx.globalAlpha = p.life * 0.5;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        });
-
-        // Confetti Burst (at final greeting)
-        if (progress > 0.85 && progress < 0.88 && confetti.current.length === 0) {
-            for (let i = 0; i < 120; i++) {
-                confetti.current.push({
-                    x: size / 2,
-                    y: size / 2,
-                    vx: (Math.random() - 0.5) * 18,
-                    vy: (Math.random() - 0.8) * 18,
-                    r: Math.random() * 6 + 4,
-                    color: `hsl(${Math.random() * 360}, 80%, 60%)`,
-                    rotation: Math.random() * Math.PI,
-                    rv: (Math.random() - 0.5) * 0.2
-                });
-            }
-        }
-
-        if (progress > 0.85) {
-            confetti.current.forEach((p) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += 0.3; // Gravity
-                p.vx *= 0.98; // Friction
-                p.rotation += p.rv;
-
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation);
-                ctx.fillStyle = p.color;
-                ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 1.5);
-                ctx.restore();
-            });
-        }
-    };
-
-    // Mouse Tracking Event
-    const handleMouseMove = (e) => {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const scaleX = canvasRef.current.width / rect.width;
-        const scaleY = canvasRef.current.height / rect.height;
-        setMousePos({
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
-        });
-    };
 
     useEffect(() => {
         if (showGift) return; // Don't animate while gift is closed
@@ -844,10 +718,6 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             frame = (frame + 1) % totalFrames;
 
             // Reset particles on loop restart for a clean experience
-            if (frame === 0) {
-                confettiRef.current = [];
-                crackersRef.current = [];
-            }
 
             animationId = requestAnimationFrame(animate);
         };
@@ -857,14 +727,60 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     }, [renderFrame, totalFrames, showGift]);
 
     const handleOpenGift = () => {
-        setIsOpening(true);
         setTimeout(() => {
             setShowGift(false);
         }, 800);
     };
 
 
-    // Generate proper animated GIF using gif.js
+    // Generate MP4 video using MediaRecorder API
+    const handleGenerateVideo = async () => {
+        if (!videoSupported) {
+            alert('Video recording is not supported in your browser. Please try a modern browser like Chrome or Firefox.');
+            return;
+        }
+
+        setIsGeneratingVideo(true);
+        setVideoProgress(0);
+
+        try {
+            console.log('Starting video generation...');
+
+            // Video settings for 25 seconds
+            const videoFrames = 750; // 25 seconds at 30fps
+            const fps = 30;
+
+            console.log(`Generating ${videoFrames} frames at ${fps}fps`);
+
+            const blob = await createAnimatedVideo(
+                renderFrame,
+                size,
+                size,
+                videoFrames,
+                fps,
+                (progress) => {
+                    console.log(`Video Progress: ${progress}%`);
+                    setVideoProgress(progress);
+                }
+            );
+
+            console.log('Video generation completed, blob size:', blob?.size);
+
+            if (blob && blob.size > 0) {
+                setVideoBlob(blob);
+                return blob;
+            } else {
+                throw new Error('Generated video is empty or invalid');
+            }
+
+        } catch (error) {
+            console.error('Video generation failed:', error);
+            alert('Failed to generate video. Error: ' + error.message);
+            return null;
+        } finally {
+            setIsGeneratingVideo(false);
+        }
+    };
     const handleGenerateGif = async () => {
         setIsGenerating(true);
         setGifProgress(0);
@@ -872,10 +788,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         try {
             console.log('Starting GIF generation...');
 
-            // Slowed down GIF settings for a more cinematic and readable experience
-            // 200 frames at 300ms = 60 seconds (much slower for better readability)
-            const gifFrames = 200;
-            const frameDelay = 300;
+            // 25 second GIF settings
+            const gifFrames = 750;
+            const frameDelay = 33; // ~30 FPS
 
             console.log(`Generating ${gifFrames} frames with ${frameDelay}ms delay`);
 
@@ -909,6 +824,28 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             return null;
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    // Download generated video
+    const handleDownloadVideo = () => {
+        if (!videoBlob) {
+            alert('Please generate the video first by clicking "Download Video".');
+            return;
+        }
+
+        const filename = `magic_wish_${wishData?.recipientName || 'special'}_${Date.now()}.webm`;
+        const success = downloadVideoBlob(videoBlob, filename);
+
+        if (!success) {
+            // Fallback: open video in new tab
+            const videoUrl = URL.createObjectURL(videoBlob);
+            const newWindow = window.open(videoUrl, '_blank');
+            if (newWindow) {
+                alert('Video opened in new tab. Right-click and select "Save As..." to download.');
+            } else {
+                alert('Download failed and popup blocked. Please allow popups and try again.');
+            }
         }
     };
 
@@ -952,28 +889,17 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
         setIsSharing(true);
         try {
-            // Include link in the message - always include the link
-            const linkMessage = shareableLink
-                ? `✨ I created a magical wish for you! View it here: ${shareableLink}\n\nCreated with Ramanujan's mathematics at wishyfi.com`
-                : `✨ A magical wish created with Ramanujan's mathematics! Visit wishyfi.com to create your own.`;
+            const linkMessage = `✨ A magical wish created with Ramanujan's mathematics! Visit wishyfi.com to create your own.`;
 
             const shared = await shareGifFile(currentBlob, wishData, linkMessage);
+
             if (!shared) {
-                // Fallback: download with instructions
-                downloadGifWithInstructions(currentBlob, wishData);
-                const instructions = shareableLink
-                    ? `GIF Downloaded! \n\nTo share on WhatsApp: \n1. Open WhatsApp chat \n2. Attach Gallery image \n3. Paste link in caption: ${shareableLink}`
-                    : `GIF Downloaded! \n\nTo share: \n1. Open your messaging app \n2. Attach the downloaded GIF file`;
-                alert(instructions);
+                // Native sharing not supported - inform user
+                alert('Native sharing is not supported on this device.\n\nPlease use the "Download GIF" button below, then manually share the file from your gallery.');
             }
         } catch (error) {
             console.error('Share failed:', error);
-            if (currentBlob) {
-                downloadGifWithInstructions(currentBlob, wishData);
-                alert('Share failed, but GIF was downloaded. You can manually attach it to your messages.');
-            } else {
-                alert('Share failed. Please try again.');
-            }
+            alert('Sharing failed. Please use the "Download GIF" button to save and share manually.');
         } finally {
             setIsSharing(false);
         }
@@ -981,25 +907,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
     // Copy shareable link
     const handleCopyLink = async () => {
+        const link = `${window.location.origin}/create`;
         try {
-            await navigator.clipboard.writeText(shareableLink);
+            await navigator.clipboard.writeText(link);
             setLinkCopied(true);
             setTimeout(() => setLinkCopied(false), 2000);
         } catch (e) {
-            const textArea = document.createElement('textarea');
-            textArea.value = shareableLink;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-9999px';
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                setLinkCopied(true);
-                setTimeout(() => setLinkCopied(false), 2000);
-            } catch (err) {
-                alert('Could not copy link. Link: ' + shareableLink);
-            }
-            document.body.removeChild(textArea);
+            alert('Could not copy link. Link: ' + link);
         }
     };
 
@@ -1008,15 +922,12 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     return (
         <div className="animation-page page">
             <div className="animation-container">
-                <div className="canvas-wrapper cinematic-border" onMouseMove={handleMouseMove} onTouchMove={(e) => {
-                    const touch = e.touches[0];
-                    handleMouseMove(touch);
-                }}>
+                <div className="canvas-wrapper cinematic-border">
                     <canvas ref={canvasRef} width={size} height={size} />
 
                     {/* --- GIFT OVERLAY --- */}
                     {showGift && (
-                        <div className={`gift-overlay ${isOpening ? 'opening' : ''}`} onClick={handleOpenGift}>
+                        <div className="gift-overlay" onClick={handleOpenGift}>
                             <div className="gift-content" style={{
                                 '--gift-primary': highlightColor,
                                 '--gift-bg': bgColor
@@ -1052,36 +963,97 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                     {linkCopied ? '✓ Copied!' : '🔗 Copy Link'}
                                 </button>
 
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={handleShareGif}
-                                    disabled={isGenerating || isSharing}
-                                    title="Share GIF + Link to WhatsApp, Telegram, etc."
-                                >
-                                    {isGenerating ? '⏳ Creating GIF...' : isSharing ? '📤 Sharing...' : '📤 Share via Apps'}
-                                </button>
+                                {/* Only show Share via Apps on devices with native share support */}
+                                {shareSupport?.hasWebShare && (
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={handleShareGif}
+                                        disabled={isGenerating || isSharing}
+                                        title="Share GIF + Link to WhatsApp, Telegram, etc."
+                                    >
+                                        {isGenerating ? '⏳ Creating GIF...' : isSharing ? '📤 Sharing...' : '📤 Share via Apps'}
+                                    </button>
+                                )}
                             </div>
 
-                            {/* Download button only after generation */}
-                            {gifBlob && !isGenerating && (
-                                <button onClick={handleDownloadGif} className="btn-link text-sm mb-md" style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', textDecoration: 'underline' }}>
-                                    📥 Download GIF instead
-                                </button>
+                            {/* Export Options */}
+                            <div className="export-options mb-md">
+                                <h4 className="text-center mb-sm">📥 Download Options</h4>
+                                <div className="export-buttons">
+                                    <button
+                                        className="btn btn-download"
+                                        onClick={handleGenerateGif}
+                                        disabled={isGenerating || isGeneratingVideo}
+                                        title="Download as animated GIF"
+                                    >
+                                        <span className="btn-icon">🎞️</span>
+                                        <span className="btn-text">{isGenerating ? 'Creating...' : 'Download GIF'}</span>
+                                    </button>
+
+                                    {videoSupported && (
+                                        <button
+                                            className="btn btn-download"
+                                            onClick={handleGenerateVideo}
+                                            disabled={isGenerating || isGeneratingVideo}
+                                            title="Download as MP4 video"
+                                        >
+                                            <span className="btn-icon">🎬</span>
+                                            <span className="btn-text">{isGeneratingVideo ? 'Creating...' : 'Download Video'}</span>
+                                        </button>
+                                    )}
+                                </div>
+
+                                {!videoSupported && (
+                                    <p className="text-sm text-secondary mt-sm">
+                                        💡 Video export requires a modern browser. GIF export is available for all browsers.
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Download buttons after generation */}
+                            {(gifBlob || videoBlob) && !isGenerating && !isGeneratingVideo && (
+                                <div className="download-ready mb-md">
+                                    {gifBlob && (
+                                        <button onClick={handleDownloadGif} className="btn-link text-sm mr-md" style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', textDecoration: 'underline' }}>
+                                            📥 Download GIF
+                                        </button>
+                                    )}
+                                    {videoBlob && (
+                                        <button onClick={handleDownloadVideo} className="btn-link text-sm" style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', textDecoration: 'underline' }}>
+                                            📥 Download Video
+                                        </button>
+                                    )}
+                                </div>
                             )}
 
-                            {/* Progress Bar */}
+                            {/* Progress Bars */}
                             {isGenerating && (
                                 <div className="mb-md">
                                     <ProgressBar progress={gifProgress} label="Creating your magical GIF..." />
                                 </div>
                             )}
 
-                            {/* GIF Success Preview */}
-                            {gifBlob && gifUrl && (
-                                <div className="gif-ready-section mb-md fade-in">
-                                    <h4 className="text-center mb-sm">✨ Success! Your Magical GIF is Ready ✨</h4>
-                                    <div className="gif-preview-box mb-md">
-                                        <img src={gifUrl} alt="Magic Gift" className="gif-preview" />
+                            {isGeneratingVideo && (
+                                <div className="mb-md">
+                                    <ProgressBar progress={videoProgress} label="Creating your magical video..." />
+                                </div>
+                            )}
+
+                            {/* Success Preview */}
+                            {(gifBlob || videoBlob) && gifUrl && (
+                                <div className="export-ready-section mb-md fade-in">
+                                    <h4 className="text-center mb-sm">✨ Success! Your Magical Export is Ready ✨</h4>
+                                    <div className="export-preview-box mb-md">
+                                        {gifBlob && <img src={gifUrl} alt="Magic Gift" className="export-preview" />}
+                                        {videoBlob && !gifBlob && (
+                                            <video
+                                                src={URL.createObjectURL(videoBlob)}
+                                                className="export-preview"
+                                                autoPlay
+                                                loop
+                                                muted
+                                            />
+                                        )}
                                     </div>
 
                                     <p className="share-info text-sm mt-sm">

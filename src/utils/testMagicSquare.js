@@ -5,12 +5,12 @@
 
 import { parseDateComponents, generateDateEchoSquare } from './magicSquare.js';
 
-// Test with example date: 14/07/2000
+// Test with Ramanujan's birthday: 22/12/1887
 console.log('='.repeat(50));
 console.log('Testing Ramanujan Magic Square Formula');
 console.log('='.repeat(50));
 
-const testDate = '14/07/2000';
+const testDate = '22/12/1887';
 console.log(`\nTest Date: ${testDate}`);
 
 const { DD, MM, CC, YY } = parseDateComponents(testDate);
