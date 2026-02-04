@@ -48,11 +48,9 @@ const DigitalGreetingAnimation = () => {
         }
     }, [wishData?.occasion]);
 
-    if (!wishData) return null;
-
     // Parse date and generate magic square
-    const { DD, MM, CC, YY } = parseDateComponents(wishData.date);
-    const { square, magicConstant } = generateDateEchoSquare(DD, MM, CC, YY);
+    const { DD, MM, CC, YY } = wishData ? parseDateComponents(wishData.date) : { DD: 0, MM: 0, CC: 0, YY: 0 };
+    const { square, magicConstant } = wishData ? generateDateEchoSquare(DD, MM, CC, YY) : { square: [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], magicConstant: 0 };
 
     const size = 800;
     const padding = 80;
@@ -63,7 +61,7 @@ const DigitalGreetingAnimation = () => {
 
     // Color palette - muted colors for white theme
     const colors = {
-        primary: wishData.colorHighlight || '#4a5568',
+        primary: wishData?.colorHighlight || '#4a5568',
         row1: '#e53e3e',
         row2: '#38a169',
         row3: '#805ad5',
@@ -73,6 +71,8 @@ const DigitalGreetingAnimation = () => {
         col3: '#e53e3e',
         col4: '#3182ce'
     };
+
+    if (!wishData) return null;
 
     const renderFrame = useCallback((ctx, frame, totalFrames) => {
         const progress = frame / totalFrames;
@@ -164,7 +164,6 @@ const DigitalGreetingAnimation = () => {
         ];
 
         // Check if date components appear in specific positions
-        const dateComponents = [DD, MM, CC, YY];
         const isDatePosition = (row, col) => {
             // First row
             if (row === 0) return true;
@@ -185,7 +184,7 @@ const DigitalGreetingAnimation = () => {
         const screenProgress = (progress % screenDuration) / screenDuration;
 
         switch (currentScreen) {
-            case 0: // Screen 1: Intro text
+            case 0: { // Screen 1: Intro text
                 const fadeIn = Math.min(1, screenProgress * 3);
                 drawText(
                     `Hi ${wishData.recipientName}`,
@@ -202,8 +201,9 @@ const DigitalGreetingAnimation = () => {
                     fadeIn * 0.8
                 );
                 break;
+            }
 
-            case 1: // Screen 2: Full magic square
+            case 1: { // Screen 2: Full magic square
                 drawGrid(1);
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 4; c++) {
@@ -213,8 +213,9 @@ const DigitalGreetingAnimation = () => {
                     }
                 }
                 break;
+            }
 
-            case 2: // Screen 3: Highlight first date reveal
+            case 2: { // Screen 3: Highlight first date reveal
                 drawGrid(1);
                 const reveal1 = dateReveals[0]; // First row
                 drawHighlight(reveal1.type, reveal1.index, reveal1.color, Math.sin(screenProgress * Math.PI * 4) * 0.5 + 0.5);
@@ -222,7 +223,6 @@ const DigitalGreetingAnimation = () => {
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 4; c++) {
                         const isHighlighted = r === reveal1.index;
-                        const isDateCell = isDatePosition(r, c);
                         drawCell(r, c, 1, isHighlighted ? reveal1.color : '#000', isHighlighted);
                     }
                 }
@@ -248,8 +248,9 @@ const DigitalGreetingAnimation = () => {
                     );
                 }
                 break;
+            }
 
-            case 3: // Screen 4: Highlight second date reveal
+            case 3: { // Screen 4: Highlight second date reveal
                 drawGrid(1);
                 const reveal2 = dateReveals[1]; // First column
                 drawHighlight(reveal2.type, reveal2.index, reveal2.color, Math.sin(screenProgress * Math.PI * 4) * 0.5 + 0.5);
@@ -257,7 +258,6 @@ const DigitalGreetingAnimation = () => {
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 4; c++) {
                         const isHighlighted = c === reveal2.index;
-                        const isDateCell = isDatePosition(r, c);
                         drawCell(r, c, 1, isHighlighted ? reveal2.color : '#000', isHighlighted);
                     }
                 }
@@ -283,8 +283,9 @@ const DigitalGreetingAnimation = () => {
                     );
                 }
                 break;
+            }
 
-            case 4: // Screen 5: 2x2 blocks
+            case 4: { // Screen 5: 2x2 blocks
                 drawGrid(1);
                 const blockColors = [colors.row1, colors.row2, colors.row3, colors.row4];
 
@@ -301,8 +302,9 @@ const DigitalGreetingAnimation = () => {
                     }
                 }
                 break;
+            }
 
-            case 5: // Screen 6: Color each row
+            case 5: { // Screen 6: Color each row
                 drawGrid(1);
                 const rowColors = [colors.row1, colors.row2, colors.row3, colors.row4];
 
@@ -319,8 +321,9 @@ const DigitalGreetingAnimation = () => {
                     }
                 }
                 break;
+            }
 
-            case 6: // Screen 7: Flash rows sequentially
+            case 6: { // Screen 7: Flash rows sequentially
                 drawGrid(1);
                 const flashRowColors = [colors.row1, colors.row2, colors.row3, colors.row4];
                 const flashRow = Math.floor(screenProgress * 4) % 4;
@@ -339,9 +342,10 @@ const DigitalGreetingAnimation = () => {
                     }
                 }
                 break;
+            }
 
             case 7: // Screen 8: Final message with template
-            default:
+            default: {
                 // Background with light overlay
                 if (templateImage) {
                     ctx.save();
@@ -380,6 +384,7 @@ const DigitalGreetingAnimation = () => {
                     );
                 }
                 break;
+            }
         }
 
     }, [square, magicConstant, wishData, templateImage, colors, size, startX, startY, cellSize, gridSize]);

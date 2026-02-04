@@ -7,7 +7,10 @@ const ShareTest = () => {
 
     useEffect(() => {
         const support = getShareSupport();
-        setShareSupport(support);
+        // Use setTimeout to avoid synchronous setState in effect
+        setTimeout(() => {
+            setShareSupport(support);
+        }, 0);
         console.log('Share Support:', support);
     }, []);
 

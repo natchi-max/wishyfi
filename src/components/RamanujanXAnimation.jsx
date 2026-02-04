@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { generateDateEchoSquare, parseDateComponents } from '../utils/magicSquare';
 import { createAnimatedGif, downloadBlob } from '../utils/gifGenerator';
@@ -50,7 +50,7 @@ const RamanujanXAnimation = ({
         try {
             const { DD, MM, CC, YY } = parseDateComponents(inputBirthday);
             return generateDateEchoSquare(DD, MM, CC, YY);
-        } catch (e) {
+        } catch {
             const { DD, MM, CC, YY } = parseDateComponents("22/12/1887");
             return generateDateEchoSquare(DD, MM, CC, YY);
         }
@@ -85,7 +85,7 @@ const RamanujanXAnimation = ({
             await navigator.clipboard.writeText(shareableLink);
             setLinkCopied(true);
             setTimeout(() => setLinkCopied(false), 2000);
-        } catch (e) {
+        } catch {
             alert('Link: ' + shareableLink);
         }
     };
@@ -130,7 +130,7 @@ const RamanujanXAnimation = ({
         }
     };
 
-    const renderFrame = (ctx, p) => {
+    const renderFrame = useCallback((ctx, p) => {
         // Clear background
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, width, height);
@@ -275,7 +275,7 @@ const RamanujanXAnimation = ({
         }
 
         updateCrackers(ctx);
-    };
+    }, [bgColor, width, height, xColor, squareData]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -292,7 +292,7 @@ const RamanujanXAnimation = ({
 
         anim = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(anim);
-    }, [duration, xColor, bgColor, squareData]);
+    }, [duration, xColor, bgColor, squareData, renderFrame]);
 
     const handleExportGif = async () => {
         setIsGeneratingGif(true);

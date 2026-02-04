@@ -121,7 +121,7 @@ export function getShareSupport() {
             // Test with actual GIF file type
             const testFile = new File(['test'], 'test.gif', { type: 'image/gif' });
             supportsFiles = navigator.canShare({ files: [testFile] });
-        } catch (e) {
+        } catch {
             supportsFiles = false;
         }
     }

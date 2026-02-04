@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { wishTemplates, getRandomTemplate } from '../utils/templates';
+import { getRandomTemplate } from '../utils/templates';
 import { OCCASION_CATEGORIES } from '../utils/imageGenerator';
 import './WishForm.css';
 
@@ -31,9 +31,6 @@ const WishForm = () => {
         themeImage: initialData?.themeImage || null
     });
 
-    const [isDateMetaEdited, setIsDateMetaEdited] = useState(!!initialData?.date);
-
-    const [showDateDropdown, setShowDateDropdown] = useState(false);
     const [errors, setErrors] = useState({});
     const [occasionSearch, setOccasionSearch] = useState('');
     const [showOccasionDropdown, setShowOccasionDropdown] = useState(false);
@@ -135,10 +132,12 @@ const WishForm = () => {
         }
     };
 
-    const useTemplate = (occasion) => {
-        const found = allOccasions.find(o => o.key === occasion);
+    const handleUseTemplate = () => {
+        const found = allOccasions.find(o => o.key === formData.occasion);
         const label = found ? found.label.replace(/[^\w\s]/gi, '').trim() : '';
-        const template = getRandomTemplate(occasion, label);
+        
+        // Get template data without using hooks in callback
+        const template = getRandomTemplate(formData.occasion, label);
         if (template) {
             setFormData(prev => ({
                 ...prev,
@@ -151,44 +150,6 @@ const WishForm = () => {
         navigate('/');
     };
 
-    const handleDateInputChange = (e) => {
-        let value = e.target.value.replace(/\D/g, '');
-
-        if (value.length >= 2) {
-            value = value.slice(0, 2) + '/' + value.slice(2);
-        }
-        if (value.length >= 5) {
-            value = value.slice(0, 5) + '/' + value.slice(5, 9);
-        }
-
-        setFormData(prev => ({
-            ...prev,
-            date: value
-        }));
-        setIsDateMetaEdited(true);
-
-        // Instant validation - validate as user types
-        if (value.length === 10) {
-            const dateError = validateDate(value);
-            if (dateError) {
-                setErrors(prev => ({
-                    ...prev,
-                    date: dateError
-                }));
-            } else {
-                setErrors(prev => ({
-                    ...prev,
-                    date: ''
-                }));
-            }
-        } else if (errors.date) {
-            // Clear error if user is still typing
-            setErrors(prev => ({
-                ...prev,
-                date: ''
-            }));
-        }
-    };
 
     const selectOccasion = (key) => {
         setFormData(prev => ({ ...prev, occasion: key }));
@@ -449,7 +410,6 @@ const WishForm = () => {
                                         const [year, month, day] = dateValue.split('-');
                                         const formattedDate = `${day}/${month}/${year}`;
                                         setFormData(prev => ({ ...prev, date: formattedDate }));
-                                        setIsDateMetaEdited(true);
                                         // Clear error when user changes date
                                         if (errors.date) {
                                             setErrors(prev => ({ ...prev, date: '' }));
@@ -476,7 +436,7 @@ const WishForm = () => {
                             <button
                                 type="button"
                                 className="template-btn"
-                                onClick={() => useTemplate(formData.occasion)}
+                                onClick={handleUseTemplate}
                                 title="Get suggestion for this occasion"
                             >
                                 ✨ Suggest

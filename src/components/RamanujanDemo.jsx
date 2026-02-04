@@ -14,7 +14,11 @@ const RamanujanDemo = () => {
             const YYYY = parseInt(parts[2]) || 0;
             const CC = Math.floor(YYYY / 100);
             const YY = YYYY % 100;
-            setComponents({ DD, MM, CC, YY });
+            
+            // Use setTimeout to avoid synchronous setState in effect
+            setTimeout(() => {
+                setComponents({ DD, MM, CC, YY });
+            }, 0);
         }
     }, [date]);
 
@@ -44,7 +48,7 @@ const RamanujanDemo = () => {
         return 'empty';
     };
 
-    const isVisible = (r, c) => {
+    const isVisible = (r) => {
         if (step === 0) return false;
         if (step === 1) return r === 0;
         if (step === 2) return r <= 1;
@@ -69,9 +73,9 @@ const RamanujanDemo = () => {
                     row.map((val, c) => (
                         <div 
                             key={`${r}-${c}`}
-                            className={`cell ${getCellClass(r, c)} ${isVisible(r, c) ? 'visible' : ''}`}
+                            className={`cell ${getCellClass(r, c)} ${isVisible(r) ? 'visible' : ''}`}
                         >
-                            {isVisible(r, c) && (
+                            {isVisible(r) && (
                                 <>
                                     <span className="value">{val}</span>
                                     {step === 1 && r === 0 && (

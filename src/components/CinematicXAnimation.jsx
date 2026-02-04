@@ -158,7 +158,7 @@ const CinematicXAnimation = ({ wishData: propWishData }) => {
                 renderScreen3(ctx, elapsed, size, highlightColor);
                 break;
             case 3: // SCREEN 4 - Row Transformation
-                renderScreen4(ctx, elapsed, size, highlightColor);
+                renderScreen4(ctx, elapsed, size);
                 break;
             case 4: // SCREEN 5 - Top Row Focus
                 renderScreen5(ctx, elapsed, size, highlightColor);
@@ -296,7 +296,7 @@ const CinematicXAnimation = ({ wishData: propWishData }) => {
     };
 
     // SCREEN 4 - Row Transformation
-    const renderScreen4 = (ctx, elapsed, size, highlightColor) => {
+    const renderScreen4 = (ctx, elapsed, size) => {
         const localElapsed = elapsed - TIMELINE.SCREEN_4.start;
         const progress = easeInOut(Math.min(localElapsed / TIMELINE.SCREEN_4.duration, 1));
 
