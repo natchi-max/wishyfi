@@ -8,17 +8,32 @@
  * @param {Object} wishData - Wish data for metadata
  * @returns {Promise<boolean>} - Success status
  */
-export async function shareGifFile(gifBlob, wishData, message = '') {
-    if (!gifBlob || gifBlob.size === 0) {
-        throw new Error('No GIF file to share');
+/**
+ * Share Media file directly via native share sheet
+ * @param {Blob} mediaBlob - The file blob to share
+ * @param {Object} wishData - Wish data for metadata
+ * @param {string} message - Message text
+ * @param {string} url - Optional URL to share
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function shareGifFile(mediaBlob, wishData, message = '', url = undefined) {
+    if (!mediaBlob || mediaBlob.size === 0) {
+        throw new Error('No file to share');
     }
 
+    // Determine file type and extension
+    const mimeType = mediaBlob.type || 'image/gif';
+    const isVideo = mimeType.startsWith('video/');
+    const extension = isVideo ? (mimeType.includes('mp4') ? '.mp4' : '.webm') : '.gif';
+
     // Create File object from blob
-    const filename = `birthday-wish-${wishData?.recipientName || 'special'}-${Date.now()}.gif`;
-    const file = new File([gifBlob], filename, {
-        type: 'image/gif',
+    const filename = `magic-wish-${wishData?.recipientName || 'special'}-${Date.now()}${extension}`;
+    const file = new File([mediaBlob], filename, {
+        type: mimeType,
         lastModified: Date.now()
     });
+
+    const shareUrl = url || window.location.href;
 
     // Check if Web Share API Level 2 (files) is supported
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -26,9 +41,11 @@ export async function shareGifFile(gifBlob, wishData, message = '') {
             await navigator.share({
                 files: [file],
                 title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
-                text: message
+                text: message,
+                // Some platforms might ignore URL when sharing files, but good to include
+                url: shareUrl
             });
-            console.log('GIF file shared successfully');
+            console.log('File shared successfully');
             return true;
         } catch (error) {
             if (error.name === 'AbortError') return true;
@@ -42,7 +59,7 @@ export async function shareGifFile(gifBlob, wishData, message = '') {
             await navigator.share({
                 title: `Magic Wish for ${wishData?.recipientName || 'Someone Special'}`,
                 text: message,
-                url: window.location.href
+                url: shareUrl
             });
             console.log('Link shared successfully');
             return true;
@@ -54,7 +71,6 @@ export async function shareGifFile(gifBlob, wishData, message = '') {
 
     console.log('Native sharing not supported');
     return false;
-
 }
 
 /**

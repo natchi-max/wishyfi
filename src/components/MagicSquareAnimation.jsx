@@ -798,6 +798,25 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         }
     };
 
+    // Helper to generate shareable link
+    const getShareUrl = useCallback(() => {
+        if (!wishData) return `${window.location.origin}/create`;
+
+        try {
+            const json = JSON.stringify(wishData);
+            // safe base64 encoding for utf8 as used in SharedWish.jsx
+            const binary = encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
+                function (match, p1) {
+                    return String.fromCharCode('0x' + p1);
+                });
+            const shareId = btoa(binary);
+            return `${window.location.origin}/share/${shareId}`;
+        } catch (e) {
+            console.error("Error generating share url", e);
+            return `${window.location.origin}/create`;
+        }
+    }, [wishData]);
+
     // Video sharing functions
     const handleShareVideo = async () => {
         let currentBlob = videoBlob;
@@ -813,9 +832,10 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
         setIsSharing(true);
         try {
-            const linkMessage = `✨ A magical wish created with Ramanujan's mathematics! Visit wishyfi.com to create your own.`;
+            const shareUrl = getShareUrl();
+            const linkMessage = `✨ A magical wish created with Ramanujan's mathematics! Watch it here: ${shareUrl}`;
 
-            const shared = await shareGifFile(currentBlob, wishData, linkMessage);
+            const shared = await shareGifFile(currentBlob, wishData, linkMessage, shareUrl);
 
             if (!shared) {
                 // Native sharing not supported - show manual sharing options
@@ -831,31 +851,35 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
     // Direct app sharing functions
     const shareToWhatsApp = () => {
-        const message = `✨ Check out this magical wish created with Ramanujan's mathematics! ${window.location.origin}/create`;
+        const shareUrl = getShareUrl();
+        const message = `✨ Check out this magical wish created with Ramanujan's mathematics! ${shareUrl}`;
         const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
     };
 
     const shareToTelegram = () => {
-        const message = `✨ Check out this magical wish created with Ramanujan's mathematics! ${window.location.origin}/create`;
-        const url = `https://t.me/share/url?url=${encodeURIComponent(window.location.origin + '/create')}&text=${encodeURIComponent(message)}`;
+        const shareUrl = getShareUrl();
+        const message = `✨ Check out this magical wish created with Ramanujan's mathematics!`;
+        const url = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
     };
 
     const shareToTwitter = () => {
-        const message = `✨ Amazing magical wish created with Ramanujan's mathematics! Create yours at`;
-        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(window.location.origin + '/create')}`;
+        const shareUrl = getShareUrl();
+        const message = `✨ Amazing magical wish created with Ramanujan's mathematics!`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(shareUrl)}`;
         window.open(url, '_blank');
     };
 
     const shareToFacebook = () => {
-        const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + '/create')}`;
+        const shareUrl = getShareUrl();
+        const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
         window.open(url, '_blank');
     };
 
     // Copy shareable link
     const handleCopyLink = async () => {
-        const link = `${window.location.origin}/create`;
+        const link = getShareUrl();
         try {
             await navigator.clipboard.writeText(link);
             setLinkCopied(true);
@@ -905,7 +929,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                 {/* Quick Actions */}
                                 <div className="quick-actions mb-lg">
                                     <h3 className="section-title text-center mb-md">🎉 Share Your Magic Wish</h3>
-                                    
+
                                     <div className="action-row mb-md">
                                         <button
                                             className="btn btn-secondary"
@@ -940,7 +964,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                     <p className="helper-text text-center mb-md">
                                         Download your magical wish as a high-quality video!
                                     </p>
-                                    
+
                                     <div className="export-buttons">
                                         <button
                                             className="btn btn-download btn-large"
@@ -972,16 +996,16 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                             <h4 className="success-title">✨ Your Magic is Ready! ✨</h4>
                                             <p className="success-subtitle">Your magical wish has been created successfully!</p>
                                         </div>
-                                        
+
                                         <div className="download-buttons-row mb-md">
                                             <button onClick={handleDownloadVideo} className="btn btn-success btn-large">
                                                 <span className="btn-icon">📥</span>
                                                 <span className="btn-text">Download Video</span>
                                             </button>
                                         </div>
-                                        
-                                        <button 
-                                            onClick={handleShareVideo} 
+
+                                        <button
+                                            onClick={handleShareVideo}
                                             className="btn btn-primary btn-large shadow-glow"
                                             disabled={isSharing}
                                         >
@@ -998,7 +1022,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                         <div className="modal-content">
                                             <h4>📤 Share Your Magic Wish</h4>
                                             <p>Choose your preferred app to share:</p>
-                                            
+
                                             <div className="share-buttons">
                                                 <button onClick={shareToWhatsApp} className="share-btn whatsapp">
                                                     <span>📱</span> WhatsApp
@@ -1013,13 +1037,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                                     <span>🔵</span> Facebook
                                                 </button>
                                             </div>
-                                            
+
                                             <p className="share-note">
                                                 📝 Note: Download the video first, then share the file along with the link!
                                             </p>
-                                            
-                                            <button 
-                                                onClick={() => setShowManualShare(false)} 
+
+                                            <button
+                                                onClick={() => setShowManualShare(false)}
                                                 className="btn btn-secondary"
                                             >
                                                 Close
