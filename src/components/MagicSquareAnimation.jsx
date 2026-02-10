@@ -166,35 +166,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             return 1;
         };
 
-        // Helper function to draw animated sum calculation
-        const drawSumAnimation = (numbers, opacity, yPosition, label = '') => {
-            ctx.save();
-            ctx.globalAlpha = opacity;
-            ctx.textAlign = 'center';
-            ctx.font = `${cellSize * 0.2}px 'Poppins', sans-serif`;
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = '#000';
-            ctx.shadowBlur = 8;
 
-            // Build the equation string
-            const equation = numbers.join(' + ') + ` = ${magicConstant}`;
-
-            // Draw label if provided
-            if (label) {
-                ctx.font = `${cellSize * 0.15}px 'Poppins', sans-serif`;
-                ctx.fillStyle = highlightColor;
-                ctx.fillText(label, size / 2, yPosition - 25);
-            }
-
-            // Draw equation
-            ctx.font = `bold ${cellSize * 0.22}px 'Poppins', sans-serif`;
-            ctx.fillStyle = '#ffe66d';
-            ctx.shadowColor = '#ffe66d';
-            ctx.shadowBlur = 15;
-            ctx.fillText(equation, size / 2, yPosition);
-
-            ctx.restore();
-        };
 
         // ═══════════════════ SCREEN 1: INTRODUCTION (0.00 - 0.18) ═══════════════════
         if (progress < 0.18) {
@@ -593,28 +565,102 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             const p = (progress - 0.95) / 0.05;
             const fade = Math.min(1, p / 0.2);
 
-            // Background image or gradient
+            // 1. Draw Background
+            ctx.save();
+            ctx.globalAlpha = fade;
+
             if (bgImage) {
-                ctx.save();
-                ctx.globalAlpha = fade;
+                // Use provided background image
                 ctx.drawImage(bgImage, 0, 0, size, size);
 
-                // Dark overlay for text readability
-                const grad = ctx.createLinearGradient(0, 0, 0, size);
-                grad.addColorStop(0, 'rgba(0,0,0,0.3)');
-                grad.addColorStop(1, 'rgba(0,0,0,0.7)');
+                // Add an elegant dark overlay
+                const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.2, size / 2, size / 2, size * 0.9);
+                grad.addColorStop(0, 'rgba(0,0,0,0.4)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.85)');
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, size, size);
-                ctx.restore();
             } else {
-                // Fallback gradient
-                const grad = ctx.createLinearGradient(0, 0, 0, size);
-                grad.addColorStop(0, highlightColor);
-                grad.addColorStop(1, TinyColor(highlightColor).darken(30).toString());
+                // Fallback elegant gradient background based on theme
+                const grad = ctx.createLinearGradient(0, 0, size, size);
+                const baseColor = TinyColor(highlightColor).isValid() ? highlightColor : '#1e293b';
+                // Make it dark and premium
+                grad.addColorStop(0, TinyColor(baseColor).darken(20).toString());
+                grad.addColorStop(0.5, TinyColor(baseColor).darken(35).toString());
+                grad.addColorStop(1, TinyColor(baseColor).darken(50).toString());
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, size, size);
-            }
 
+                // Add subtle grid pattern
+                ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+                ctx.lineWidth = 1;
+                const gridSize = size / 20;
+                for (let i = 0; i < 20; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * gridSize, 0);
+                    ctx.lineTo(i * gridSize, size);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * gridSize);
+                    ctx.lineTo(size, i * gridSize);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+
+            // 2. Draw "Wish Card" Frame
+            ctx.save();
+            ctx.globalAlpha = fade;
+            ctx.translate(size / 2, size / 2); // Center coordinate system
+
+            // Card Border
+            const cardW = size * 0.85;
+            const cardH = size * 0.85;
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)'; // Gold-like
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(255, 215, 0, 0.3)';
+            ctx.shadowBlur = 10;
+
+            // Fancy border path
+            ctx.beginPath();
+            ctx.rect(-cardW / 2, -cardH / 2, cardW, cardH);
+            ctx.stroke();
+
+            // Corner Flourishes
+            const cornerSize = 40;
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+
+            // Top-left
+            ctx.beginPath();
+            ctx.moveTo(-cardW / 2, -cardH / 2 + cornerSize);
+            ctx.lineTo(-cardW / 2, -cardH / 2);
+            ctx.lineTo(-cardW / 2 + cornerSize, -cardH / 2);
+            ctx.stroke();
+
+            // Top-right
+            ctx.beginPath();
+            ctx.moveTo(cardW / 2 - cornerSize, -cardH / 2);
+            ctx.lineTo(cardW / 2, -cardH / 2);
+            ctx.lineTo(cardW / 2, -cardH / 2 + cornerSize);
+            ctx.stroke();
+
+            // Bottom-right
+            ctx.beginPath();
+            ctx.moveTo(cardW / 2, cardH / 2 - cornerSize);
+            ctx.lineTo(cardW / 2, cardH / 2);
+            ctx.lineTo(cardW / 2 - cornerSize, cardH / 2);
+            ctx.stroke();
+
+            // Bottom-left
+            ctx.beginPath();
+            ctx.moveTo(-cardW / 2 + cornerSize, cardH / 2);
+            ctx.lineTo(-cardW / 2, cardH / 2);
+            ctx.lineTo(-cardW / 2, cardH / 2 - cornerSize);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // 3. Text and Content
             ctx.save();
             ctx.globalAlpha = fade;
             ctx.textAlign = 'center';
@@ -622,52 +668,50 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.shadowColor = 'rgba(0,0,0,0.8)';
             ctx.shadowBlur = 10;
 
-            // Title
-            ctx.font = `bold ${size * 0.09}px 'Dancing Script', cursive`;
-            ctx.fillText(`Happy ${(wishData?.occasion || 'celebration').charAt(0).toUpperCase() + (wishData?.occasion || 'celebration').slice(1)}!`, size / 2, size * 0.25);
+            // Occasion Title
+            const occasionTitle = wishData?.greetingTitle || `Happy ${(wishData?.occasion || 'celebration').charAt(0).toUpperCase() + (wishData?.occasion || 'celebration').slice(1)}!`;
+            ctx.font = `bold ${size * 0.1}px 'Playfair Display', serif`;
 
-            // Floating Emoji Particles (Deterministic)
-            const emojis = ['✨', '💖', '⭐', '🎈', '🎉'];
-            const particleCount = 20;
+            // Add gold gradient to text
+            const textGrad = ctx.createLinearGradient(0, size * 0.2, 0, size * 0.3);
+            textGrad.addColorStop(0, '#ffffff');
+            textGrad.addColorStop(0.5, '#fef3c7'); // Light gold
+            textGrad.addColorStop(1, '#fcd34d'); // Gold
+            ctx.fillStyle = textGrad;
+            ctx.fillText(occasionTitle, size / 2, size * 0.28);
 
-            for (let i = 0; i < particleCount; i++) {
-                // Deterministic pseudo-random based on index
-                const seed = i * 1337;
-                const speed = 0.5 + ((seed % 100) / 100);
+            // Elegant Separator
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(size * 0.3, size * 0.33);
+            ctx.lineTo(size * 0.7, size * 0.33);
+            ctx.stroke();
 
-                // Position based on time (p)
-                const yOffset = (p * 500 * speed + seed) % (size + 100) - 50;
-                const x = (seed % size);
-                const y = size - yOffset; // Move upwards
+            // Recipient Name
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `italic ${size * 0.05}px 'Playfair Display', serif`;
+            ctx.fillText(`For ${wishData?.recipientName || 'You'}`, size / 2, size * 0.39);
 
-                // Wiggle
-                const xWiggle = Math.sin(p * 10 + i) * 20;
-
-                const emoji = emojis[i % emojis.length];
-                const fontSize = 20 + (seed % 20);
-
-                ctx.font = `${fontSize}px Arial`;
-                ctx.fillText(emoji, x + xWiggle, y);
-            }
-
-            // Recipient
-            ctx.font = `${size * 0.04}px 'Inter', sans-serif`;
-            ctx.fillText(`For ${wishData?.recipientName || 'You'}`, size / 2, size * 0.35);
-
-            // Message with word wrapping
-            ctx.font = `${size * 0.03}px 'Inter', sans-serif`;
+            // Wish Message
+            ctx.font = `${size * 0.035}px 'Inter', sans-serif`;
             const message = wishData?.message || 'A special wish for you';
             const words = message.split(' ');
             let line = '';
-            let y = size * 0.5;
+            let y = size * 0.52;
+            const maxWidth = size * 0.7;
+            const lineHeight = size * 0.055;
 
+            ctx.shadowBlur = 4; // Reduced shadow for body text
+
+            // Word Wrap Logic
             for (let n = 0; n < words.length; n++) {
                 const testLine = line + words[n] + ' ';
                 const metrics = ctx.measureText(testLine);
-                if (metrics.width > size * 0.8 && n > 0) {
+                if (metrics.width > maxWidth && n > 0) {
                     ctx.fillText(line, size / 2, y);
                     line = words[n] + ' ';
-                    y += size * 0.05;
+                    y += lineHeight;
                 } else {
                     line = testLine;
                 }
@@ -676,18 +720,43 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
             // Date
             ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
-            ctx.fillText(wishData?.date || '', size / 2, size * 0.75);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillText(wishData?.date || '', size / 2, size * 0.78);
 
             // Sender
             if (wishData?.senderName) {
-                ctx.font = `italic ${size * 0.025}px 'Inter', sans-serif`;
-                ctx.fillText(`— From ${wishData.senderName}`, size / 2, size * 0.85);
+                ctx.font = `italic bold ${size * 0.03}px 'Playfair Display', serif`;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`— Warmly, ${wishData.senderName}`, size / 2, size * 0.85);
             }
 
-            // Branding
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.font = `${size * 0.02}px 'Inter', sans-serif`;
-            ctx.fillText('wishyfi.com', size / 2, size * 0.95);
+            // Simple Branding
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.9)';
+            ctx.font = `${size * 0.022}px 'Inter', sans-serif`;
+            ctx.fillText('wishyfi.com', size / 2, size * 0.93);
+
+            // Sparkle Particles (Deterministic)
+            const sparkleCount = 25;
+            for (let i = 0; i < sparkleCount; i++) {
+                const seed = i * 492;
+                const x = (seed % (size * 0.9)) + size * 0.05;
+                const y = ((seed * 3) % (size * 0.9)) + size * 0.05;
+
+                const sparkleSize = (Math.sin(p * 5 + i) + 1) * 3 + 2;
+                const opacity = (Math.sin(p * 3 + i * 2) + 1) / 2 * 0.8;
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'white';
+
+                // Draw Diamond Sparkle
+                ctx.beginPath();
+                ctx.moveTo(x, y - sparkleSize);
+                ctx.lineTo(x + sparkleSize / 2, y);
+                ctx.lineTo(x, y + sparkleSize);
+                ctx.lineTo(x - sparkleSize / 2, y);
+                ctx.fill();
+            }
 
             ctx.restore();
         }

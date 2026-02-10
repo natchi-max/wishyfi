@@ -21,6 +21,7 @@ const WishForm = () => {
     const [formData, setFormData] = useState({
         occasion: initialData?.occasion || 'birthday',
         customOccasion: initialData?.customOccasion || '',
+        greetingTitle: initialData?.greetingTitle || 'Happy Birthday!',
         recipientName: initialData?.recipientName || '',
         senderName: initialData?.senderName || '',
         date: initialData?.date || getTodayDate(), // Prepopulate with today's date
@@ -102,6 +103,10 @@ const WishForm = () => {
     const validateForm = () => {
         const newErrors = {};
 
+        if (!formData.greetingTitle.trim()) {
+            newErrors.greetingTitle = 'Please enter a greeting title';
+        }
+
         if (!formData.recipientName.trim()) {
             newErrors.recipientName = 'Please enter recipient name';
         }
@@ -135,7 +140,7 @@ const WishForm = () => {
     const handleUseTemplate = () => {
         const found = allOccasions.find(o => o.key === formData.occasion);
         const label = found ? found.label.replace(/[^\w\s]/gi, '').trim() : '';
-        
+
         // Get template data without using hooks in callback
         const template = getRandomTemplate(formData.occasion, label);
         if (template) {
@@ -152,7 +157,22 @@ const WishForm = () => {
 
 
     const selectOccasion = (key) => {
-        setFormData(prev => ({ ...prev, occasion: key }));
+        const found = allOccasions.find(o => o.key === key);
+        const label = found ? found.label : '';
+
+        // Default greeting logic
+        let defaultGreeting = `Happy ${label}!`;
+        // Handle special cases without "Happy" prefix if needed, or rely on user edit
+        if (key === 'sympathy') defaultGreeting = 'With Deepest Sympathy';
+        if (key === 'getwellsoon') defaultGreeting = 'Get Well Soon!';
+        if (key === 'thankyou') defaultGreeting = 'Thank You!';
+        if (key === 'other') defaultGreeting = 'Best Wishes!';
+
+        setFormData(prev => ({
+            ...prev,
+            occasion: key,
+            greetingTitle: defaultGreeting
+        }));
         setShowOccasionDropdown(false);
         setOccasionSearch('');
     };
@@ -174,7 +194,7 @@ const WishForm = () => {
                 <form onSubmit={handleSubmit} className="wish-form">
                     {/* Occasion Selection with Search */}
                     <div className="form-group">
-                        <label>🎉 Occasion</label>
+                        <label>🎉 Occasion Category</label>
                         <div className="occasion-selector">
                             <div
                                 className="occasion-selected"
@@ -211,6 +231,23 @@ const WishForm = () => {
                                         )}
                                     </div>
                                 </div>
+                            )}
+                        </div>
+
+                        {/* Title Input */}
+                        <div className="mt-md mb-md">
+                            <label htmlFor="greetingTitle">✨ Greeting Title (Card Header)</label>
+                            <input
+                                type="text"
+                                id="greetingTitle"
+                                name="greetingTitle"
+                                value={formData.greetingTitle}
+                                onChange={handleChange}
+                                placeholder="e.g. Happy Birthday! or Pongal Vazhthukkal!"
+                                className={`form-input ${errors.greetingTitle ? 'error' : ''}`}
+                            />
+                            {errors.greetingTitle && (
+                                <span className="error-message">{errors.greetingTitle}</span>
                             )}
                         </div>
 
