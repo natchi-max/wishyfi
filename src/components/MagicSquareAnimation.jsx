@@ -72,13 +72,19 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     // Calculate Square using Date Echo Logic (with fallbacks)
     const dateStr = wishData?.date;
     const { DD, MM, CC, YY } = dateStr ? parseDateComponents(dateStr) : { DD: 0, MM: 0, CC: 0, YY: 0 };
-    const { square, magicConstant } = dateStr ? generateDateEchoSquare(DD, MM, CC, YY) : { square: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], magicConstant: 0 };
+    const { square, magicConstant: calculatedMagicConstant } = dateStr ? generateDateEchoSquare(DD, MM, CC, YY) : { square: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], magicConstant: 0 };
 
     // For display purposes, we want the first row to show the original date components
     const displaySquare = dateStr ? [...square] : [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
     if (dateStr) {
         displaySquare[0] = [DD, MM, CC, YY]; // Always show original date in first row
     }
+
+    // Calculate the actual magic constant from the displayed square (main diagonal sum)
+    // Since we override the first row, we need to recalculate based on what's actually shown
+    const magicConstant = dateStr
+        ? displaySquare[0][0] + displaySquare[1][1] + displaySquare[2][2] + displaySquare[3][3]
+        : 0;
 
     const size = 800; // Increased resolution
     const padding = 100;

@@ -3,12 +3,8 @@ import App from './App';
 import LandingPage from './components/LandingPage';
 import WishForm from './components/WishForm';
 import MagicSquareAnimation from './components/MagicSquareAnimation';
-import DigitalGreetingAnimation from './components/DigitalGreetingAnimation';
-import CinematicXAnimation from './components/CinematicXAnimation';
 import RamanujanXAnimation from './components/RamanujanXAnimation';
 import SharedWish from './components/SharedWish';
-import ShareTest from './components/ShareTest';
-import WishAnimationDemo from './components/WishAnimationDemo';
 import NotFound from './components/NotFound';
 
 export const router = createBrowserRouter([
@@ -29,10 +25,6 @@ export const router = createBrowserRouter([
         element: <MagicSquareAnimation />
       },
       {
-        path: 'digital/:wishId?',
-        element: <DigitalGreetingAnimation />
-      },
-      {
         path: 'animation/:wishId?',
         element: <MagicSquareAnimation />
       },
@@ -43,14 +35,6 @@ export const router = createBrowserRouter([
       {
         path: 'share/:shareId',
         element: <SharedWish />
-      },
-      {
-        path: 'test-share',
-        element: <ShareTest />
-      },
-      {
-        path: 'wish-animation',
-        element: <WishAnimationDemo />
       },
       {
         path: '*',
