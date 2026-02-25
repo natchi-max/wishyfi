@@ -16,15 +16,9 @@ const SharedWish = () => {
       }).join(''));
 
       const parsed = JSON.parse(decodedData);
-      // Use setTimeout to avoid synchronous setState in effect
-      setTimeout(() => {
-        setWishData(parsed);
-      }, 0);
+      setWishData(parsed);
     } catch {
-      // Use setTimeout to avoid synchronous setState in effect
-      setTimeout(() => {
-        setError('Invalid wish link');
-      }, 0);
+      setError('Invalid wish link');
     }
   }, [shareId]);
 

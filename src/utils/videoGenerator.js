@@ -19,7 +19,7 @@ export async function createAnimatedVideo(
   height,
   totalFrames,
   fps = 30,
-  onProgress = () => {}
+  onProgress = () => { }
 ) {
   return new Promise((resolve, reject) => {
     try {
@@ -31,7 +31,7 @@ export async function createAnimatedVideo(
 
       // Get canvas stream
       const stream = canvas.captureStream(fps);
-      
+
       // Setup MediaRecorder
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp9', // Use VP9 for better quality
@@ -39,7 +39,7 @@ export async function createAnimatedVideo(
       });
 
       const chunks = [];
-      
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data);
@@ -70,7 +70,7 @@ export async function createAnimatedVideo(
 
         // Render current frame
         renderFrame(ctx, currentFrame, totalFrames);
-        
+
         // Update progress
         const progress = Math.round((currentFrame / totalFrames) * 100);
         onProgress(progress);
@@ -103,14 +103,14 @@ export function downloadVideoBlob(blob, filename) {
     a.href = url;
     a.download = filename;
     a.style.display = 'none';
-    
+
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    
+
     // Clean up
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    
+
     return true;
   } catch (error) {
     console.error('Download failed:', error);
@@ -133,8 +133,6 @@ export async function convertWebMToMP4(webmBlob) {
  */
 export function isVideoRecordingSupported() {
   return !!(
-    navigator.mediaDevices &&
-    navigator.mediaDevices.getUserMedia &&
     window.MediaRecorder &&
     HTMLCanvasElement.prototype.captureStream
   );
@@ -151,6 +149,6 @@ export function getSupportedVideoTypes() {
     'video/mp4;codecs=h264',
     'video/mp4'
   ];
-  
+
   return types.filter(type => MediaRecorder.isTypeSupported(type));
 }

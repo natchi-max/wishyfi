@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './MagicSquareAnimation.css';
 import { parseDateComponents, generateDateEchoSquare } from '../utils/magicSquare';
@@ -8,6 +8,29 @@ import { ProgressBar } from './LoadingComponents';
 import TinyColor from 'tinycolor2';
 
 import { getOccasionImage } from '../utils/imageFallback';
+
+// VideoPreview component to handle object URL lifecycle and avoid memory leaks
+const VideoPreview = ({ blob }) => {
+    const url = useMemo(() => blob ? URL.createObjectURL(blob) : null, [blob]);
+
+    useEffect(() => {
+        return () => {
+            if (url) URL.revokeObjectURL(url);
+        };
+    }, [url]);
+
+    if (!url) return null;
+
+    return (
+        <video
+            src={url}
+            className="export-preview"
+            autoPlay
+            loop
+            muted
+        />
+    );
+};
 
 // Helper to format numbers as two digits (e.g., 7 -> "07", 1 -> "01")
 const formatTwoDigit = (num) => {
@@ -74,17 +97,11 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
     const { DD, MM, CC, YY } = dateStr ? parseDateComponents(dateStr) : { DD: 0, MM: 0, CC: 0, YY: 0 };
     const { square, magicConstant: calculatedMagicConstant } = dateStr ? generateDateEchoSquare(DD, MM, CC, YY) : { square: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], magicConstant: 0 };
 
-    // For display purposes, we want the first row to show the original date components
-    const displaySquare = dateStr ? [...square] : [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
-    if (dateStr) {
-        displaySquare[0] = [DD, MM, CC, YY]; // Always show original date in first row
-    }
+    // Use the square directly from the generator (first row already contains date components)
+    const displaySquare = dateStr ? square : [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
 
-    // Calculate the actual magic constant from the displayed square (main diagonal sum)
-    // Since we override the first row, we need to recalculate based on what's actually shown
-    const magicConstant = dateStr
-        ? displaySquare[0][0] + displaySquare[1][1] + displaySquare[2][2] + displaySquare[3][3]
-        : 0;
+    // Use the magic constant calculated by the generator (accounts for any offset corrections)
+    const magicConstant = dateStr ? calculatedMagicConstant : 0;
 
     const size = 800; // Increased resolution
     const padding = 100;
@@ -599,15 +616,15 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 // Add subtle grid pattern
                 ctx.strokeStyle = 'rgba(255,255,255,0.03)';
                 ctx.lineWidth = 1;
-                const gridSize = size / 20;
+                const patternGridSize = size / 20;
                 for (let i = 0; i < 20; i++) {
                     ctx.beginPath();
-                    ctx.moveTo(i * gridSize, 0);
-                    ctx.lineTo(i * gridSize, size);
+                    ctx.moveTo(i * patternGridSize, 0);
+                    ctx.lineTo(i * patternGridSize, size);
                     ctx.stroke();
                     ctx.beginPath();
-                    ctx.moveTo(0, i * gridSize);
-                    ctx.lineTo(size, i * gridSize);
+                    ctx.moveTo(0, i * patternGridSize);
+                    ctx.lineTo(size, i * patternGridSize);
                     ctx.stroke();
                 }
             }
@@ -745,8 +762,8 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             const sparkleCount = 25;
             for (let i = 0; i < sparkleCount; i++) {
                 const seed = i * 492;
-                const x = (seed % (size * 0.9)) + size * 0.05;
-                const y = ((seed * 3) % (size * 0.9)) + size * 0.05;
+                const sx = (seed % (size * 0.9)) + size * 0.05;
+                const sy = ((seed * 3) % (size * 0.9)) + size * 0.05;
 
                 const sparkleSize = (Math.sin(p * 5 + i) + 1) * 3 + 2;
                 const opacity = (Math.sin(p * 3 + i * 2) + 1) / 2 * 0.8;
@@ -757,10 +774,10 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
                 // Draw Diamond Sparkle
                 ctx.beginPath();
-                ctx.moveTo(x, y - sparkleSize);
-                ctx.lineTo(x + sparkleSize / 2, y);
-                ctx.lineTo(x, y + sparkleSize);
-                ctx.lineTo(x - sparkleSize / 2, y);
+                ctx.moveTo(sx, sy - sparkleSize);
+                ctx.lineTo(sx + sparkleSize / 2, sy);
+                ctx.lineTo(sx, sy + sparkleSize);
+                ctx.lineTo(sx - sparkleSize / 2, sy);
                 ctx.fill();
             }
 
@@ -796,9 +813,13 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         return () => cancelAnimationFrame(animationId);
     }, [renderFrame, totalFrames, showGift]);
 
+    const [giftOpening, setGiftOpening] = useState(false);
+
     const handleOpenGift = () => {
+        setGiftOpening(true);
         setTimeout(() => {
             setShowGift(false);
+            setGiftOpening(false);
         }, 800);
     };
 
@@ -980,7 +1001,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
                         {/* --- GIFT OVERLAY --- */}
                         {showGift && (
-                            <div className="gift-overlay" onClick={handleOpenGift}>
+                            <div className={`gift-overlay${giftOpening ? ' opening' : ''}`} onClick={handleOpenGift}>
                                 <div className="gift-content" style={{
                                     '--gift-primary': highlightColor,
                                     '--gift-bg': bgColor
@@ -1139,13 +1160,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                                     <div className="export-preview-section mb-lg fade-in">
                                         <h4 className="preview-title text-center mb-md">🎉 Your Magical Creation</h4>
                                         <div className="export-preview-box mb-md">
-                                            <video
-                                                src={URL.createObjectURL(videoBlob)}
-                                                className="export-preview"
-                                                autoPlay
-                                                loop
-                                                muted
-                                            />
+                                            <VideoPreview blob={videoBlob} />
                                         </div>
 
                                         <div className="share-tips text-center">
