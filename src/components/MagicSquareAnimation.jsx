@@ -141,14 +141,16 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         const progress = frame / total;
 
         // ════════════════════════════════════════════════════════════
-        // CINEMATIC 6-SCREEN FLOW (20 SECONDS TOTAL)
+        // CINEMATIC 8-SCREEN FLOW (20 SECONDS TOTAL)
         // ════════════════════════════════════════════════════════════
-        // Screen 1 (0.00 - 0.18): Introduction - 3.6 seconds
-        // Screen 2 (0.18 - 0.35): Date Foundation - 3.4 seconds  
-        // Screen 3 (0.35 - 0.55): Diagonal Magic - 4.0 seconds
-        // Screen 4 (0.55 - 0.75): Secret Recipe - 4.0 seconds
-        // Screen 5 (0.75 - 0.95): Color Pattern - 4.0 seconds
-        // Screen 6 (0.95 - 1.00): Final Greeting - 1.0 second
+        // Screen 1 (0.00 - 0.12): Introduction - 2.4 seconds
+        // Screen 2 (0.12 - 0.25): Date Foundation - 2.6 seconds
+        // Screen 3 (0.25 - 0.38): Row Sums - 2.6 seconds
+        // Screen 4 (0.38 - 0.51): Column Sums - 2.6 seconds
+        // Screen 5 (0.51 - 0.64): Diagonal Magic - 2.6 seconds
+        // Screen 6 (0.64 - 0.77): Secret Recipe (2×2) - 2.6 seconds
+        // Screen 7 (0.77 - 0.93): Color Pattern - 3.2 seconds
+        // Screen 8 (0.93 - 1.00): Final Greeting - 1.4 seconds
 
         // Clear & Background
         ctx.fillStyle = bgColor;
@@ -191,9 +193,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
 
 
-        // ═══════════════════ SCREEN 1: INTRODUCTION (0.00 - 0.18) ═══════════════════
-        if (progress < 0.18) {
-            const p = progress / 0.18;
+        // ═══════════════════ SCREEN 1: INTRODUCTION (0.00 - 0.12) ═══════════════════
+        if (progress < 0.12) {
+            const p = progress / 0.12;
 
             ctx.save();
             ctx.textAlign = 'center';
@@ -244,9 +246,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 2: DATE FOUNDATION (0.18 - 0.35) ═══════════════════
-        else if (progress >= 0.18 && progress < 0.35) {
-            const p = (progress - 0.18) / 0.17;
+        // ═══════════════════ SCREEN 2: DATE FOUNDATION (0.12 - 0.25) ═══════════════════
+        else if (progress >= 0.12 && progress < 0.25) {
+            const p = (progress - 0.12) / 0.13;
             const fade = smoothFade(p, 0.2, 0.85);
 
             drawGrid(ctx, fade);
@@ -289,9 +291,199 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 3: DIAGONAL MAGIC (0.35 - 0.55) ═══════════════════
-        else if (progress >= 0.35 && progress < 0.55) {
-            const p = (progress - 0.35) / 0.20;
+        // ═══════════════════ SCREEN 3: ROW SUMS (0.25 - 0.38) ═══════════════════
+        else if (progress >= 0.25 && progress < 0.38) {
+            const p = (progress - 0.25) / 0.13;
+            const fade = smoothFade(p, 0.1, 0.9);
+
+            drawGrid(ctx, 1);
+
+            const rowColors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'];
+
+            // Draw all cells dimmed first
+            for (let ri = 0; ri < 4; ri++) {
+                for (let ci = 0; ci < 4; ci++) {
+                    drawCell(ri, ci, 0.2 * fade, null, false);
+                }
+            }
+
+            // Animate each row highlighting sequentially
+            for (let row = 0; row < 4; row++) {
+                const rowDelay = row * 0.2;
+                const rowProgress = Math.max(0, Math.min(1, (p - rowDelay) / 0.25));
+
+                if (rowProgress > 0) {
+                    const rowFade = smoothFade(rowProgress, 0.15, 0.85);
+                    const color = rowColors[row];
+
+                    // Glowing row background
+                    ctx.save();
+                    ctx.globalAlpha = rowFade * fade * 0.35;
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 20;
+                    ctx.fillRect(startX, startY + row * cellSize, gridSize, cellSize);
+                    ctx.restore();
+
+                    // Draw connecting line across the row
+                    ctx.save();
+                    ctx.globalAlpha = rowFade * fade * 0.7;
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 4;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 15;
+                    ctx.setLineDash([8, 4]);
+                    ctx.beginPath();
+                    const rowCenterY = startY + row * cellSize + cellSize / 2;
+                    ctx.moveTo(startX + cellSize * 0.2, rowCenterY);
+                    ctx.lineTo(startX + gridSize - cellSize * 0.2, rowCenterY);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.restore();
+
+                    // Highlight each cell in the row sequentially
+                    for (let ci = 0; ci < 4; ci++) {
+                        const cellDelay = ci * 0.1;
+                        const cellP = Math.max(0, Math.min(1, (rowProgress - cellDelay) / 0.3));
+
+                        if (cellP > 0) {
+                            drawCell(row, ci, cellP * rowFade * fade, color, true);
+                        }
+                    }
+
+                    // Show sum = magicConstant at the end of the row
+                    if (rowProgress > 0.5) {
+                        const sumFade = Math.min(1, (rowProgress - 0.5) / 0.3);
+                        ctx.save();
+                        ctx.globalAlpha = sumFade * rowFade * fade;
+                        ctx.fillStyle = color;
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 12;
+                        ctx.fillText(`= ${magicConstant}`, startX + gridSize + 15, startY + row * cellSize + cellSize / 2);
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // Title
+            ctx.save();
+            ctx.globalAlpha = fade;
+            ctx.textAlign = 'center';
+            ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
+            ctx.fillStyle = baseTextColor;
+            ctx.shadowColor = isLtTheme ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(`Every row sums to ${magicConstant}`, startX + gridSize / 2, startY - 35);
+
+            // Add wishyfi.com
+            ctx.globalAlpha = fade * 0.7;
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
+            ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+            ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
+            ctx.restore();
+        }
+
+        // ═══════════════════ SCREEN 4: COLUMN SUMS (0.38 - 0.51) ═══════════════════
+        else if (progress >= 0.38 && progress < 0.51) {
+            const p = (progress - 0.38) / 0.13;
+            const fade = smoothFade(p, 0.1, 0.9);
+
+            drawGrid(ctx, 1);
+
+            const colColors = ['#f472b6', '#38bdf8', '#34d399', '#fb923c'];
+
+            // Draw all cells dimmed first
+            for (let ri = 0; ri < 4; ri++) {
+                for (let ci = 0; ci < 4; ci++) {
+                    drawCell(ri, ci, 0.2 * fade, null, false);
+                }
+            }
+
+            // Animate each column highlighting sequentially
+            for (let col = 0; col < 4; col++) {
+                const colDelay = col * 0.2;
+                const colProgress = Math.max(0, Math.min(1, (p - colDelay) / 0.25));
+
+                if (colProgress > 0) {
+                    const colFade = smoothFade(colProgress, 0.15, 0.85);
+                    const color = colColors[col];
+
+                    // Glowing column background
+                    ctx.save();
+                    ctx.globalAlpha = colFade * fade * 0.35;
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 20;
+                    ctx.fillRect(startX + col * cellSize, startY, cellSize, gridSize);
+                    ctx.restore();
+
+                    // Draw connecting line down the column
+                    ctx.save();
+                    ctx.globalAlpha = colFade * fade * 0.7;
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 4;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 15;
+                    ctx.setLineDash([8, 4]);
+                    ctx.beginPath();
+                    const colCenterX = startX + col * cellSize + cellSize / 2;
+                    ctx.moveTo(colCenterX, startY + cellSize * 0.2);
+                    ctx.lineTo(colCenterX, startY + gridSize - cellSize * 0.2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.restore();
+
+                    // Highlight each cell in the column sequentially (top to bottom)
+                    for (let ri = 0; ri < 4; ri++) {
+                        const cellDelay = ri * 0.1;
+                        const cellP = Math.max(0, Math.min(1, (colProgress - cellDelay) / 0.3));
+
+                        if (cellP > 0) {
+                            drawCell(ri, col, cellP * colFade * fade, color, true);
+                        }
+                    }
+
+                    // Show sum = magicConstant below the column
+                    if (colProgress > 0.5) {
+                        const sumFade = Math.min(1, (colProgress - 0.5) / 0.3);
+                        ctx.save();
+                        ctx.globalAlpha = sumFade * colFade * fade;
+                        ctx.fillStyle = color;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'top';
+                        ctx.font = `bold ${cellSize * 0.22}px 'Poppins', sans-serif`;
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 12;
+                        ctx.fillText(`= ${magicConstant}`, startX + col * cellSize + cellSize / 2, startY + gridSize + 12);
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // Title
+            ctx.save();
+            ctx.globalAlpha = fade;
+            ctx.textAlign = 'center';
+            ctx.font = `bold ${cellSize * 0.28}px 'Poppins', sans-serif`;
+            ctx.fillStyle = baseTextColor;
+            ctx.shadowColor = isLtTheme ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(`Every column sums to ${magicConstant}`, startX + gridSize / 2, startY - 35);
+
+            // Add wishyfi.com
+            ctx.globalAlpha = fade * 0.7;
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.6)';
+            ctx.font = `${size * 0.025}px 'Inter', sans-serif`;
+            ctx.fillText('wishyfi.com', startX + gridSize / 2, size - 30);
+            ctx.restore();
+        }
+
+        // ═══════════════════ SCREEN 5: DIAGONAL MAGIC (0.51 - 0.64) ═══════════════════
+        else if (progress >= 0.51 && progress < 0.64) {
+            const p = (progress - 0.51) / 0.13;
             const fade = smoothFade(p, 0.1, 0.9);
 
             drawGrid(ctx, 1);
@@ -427,9 +619,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 4: SECRET RECIPE (0.55 - 0.75) ═══════════════════
-        else if (progress >= 0.55 && progress < 0.75) {
-            const p = (progress - 0.55) / 0.20;
+        // ═══════════════════ SCREEN 6: SECRET RECIPE / 2×2 QUADRANTS (0.64 - 0.77) ═══════════════════
+        else if (progress >= 0.64 && progress < 0.77) {
+            const p = (progress - 0.64) / 0.13;
             const fade = smoothFade(p, 0.2, 0.85);
 
             drawGrid(ctx, 1);
@@ -486,9 +678,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 5: COLOR PATTERN (0.75 - 0.95) ═══════════════════
-        else if (progress >= 0.75 && progress < 0.95) {
-            const p = (progress - 0.75) / 0.20;
+        // ═══════════════════ SCREEN 7: COLOR PATTERN (0.77 - 0.93) ═══════════════════
+        else if (progress >= 0.77 && progress < 0.93) {
+            const p = (progress - 0.77) / 0.16;
             const fade = smoothFade(p, 0.15, 0.85);
 
             drawGrid(ctx, 1);
@@ -583,9 +775,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 6: FINAL GREETING (0.95 - 1.00) ═══════════════════
-        else if (progress >= 0.95) {
-            const p = (progress - 0.95) / 0.05;
+        // ═══════════════════ SCREEN 8: FINAL GREETING (0.93 - 1.00) ═══════════════════
+        else if (progress >= 0.93) {
+            const p = (progress - 0.93) / 0.07;
             const fade = Math.min(1, p / 0.2);
 
             // 1. Draw Background
