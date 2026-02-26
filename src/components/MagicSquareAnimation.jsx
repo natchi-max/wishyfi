@@ -984,13 +984,30 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             const p = (progress - 0.90) / 0.10;
             const fade = smoothFade(p, 0.2, 0.9);
 
-            // Background - Elegant gradient
-            const grad = ctx.createLinearGradient(0, 0, size, size);
-            const baseColor = TinyColor(highlightColor).isValid() ? highlightColor : '#667eea';
-            grad.addColorStop(0, TinyColor(baseColor).darken(20).toString());
-            grad.addColorStop(1, TinyColor(baseColor).darken(40).toString());
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, size, size);
+            // 1. Draw Background (Match Screen 8 style)
+            ctx.save();
+            ctx.globalAlpha = fade;
+
+            if (bgImage) {
+                // Use provided background image
+                ctx.drawImage(bgImage, 0, 0, size, size);
+
+                // Add an elegant dark glassmorphism overlay
+                const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.2, size / 2, size / 2, size * 0.9);
+                grad.addColorStop(0, 'rgba(0,0,0,0.6)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.9)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, size, size);
+            } else {
+                // Fallback elegant dark gradient
+                const grad = ctx.createLinearGradient(0, 0, size, size);
+                const baseColor = TinyColor(highlightColor).isValid() ? highlightColor : '#1e293b';
+                grad.addColorStop(0, TinyColor(baseColor).darken(40).toString());
+                grad.addColorStop(1, TinyColor(baseColor).darken(60).toString());
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, size, size);
+            }
+            ctx.restore();
 
             ctx.save();
             ctx.globalAlpha = fade;
