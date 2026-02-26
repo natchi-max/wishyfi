@@ -1,14 +1,14 @@
 /**
- * Ramanujan Magic Square Generator - Based on the exact formula from the image
+ * Enhanced Magic Square Generator
  * 
- * Input: Date in DD/MM/YYYY format (e.g., 22/12/1887)
- * Output: 4x4 magic square where first row is [DD, MM, CC, YY]
+ * Uses a robust diagonal magic square construction where the first row is the date.
+ * This version is safer for all dates (even early months) as it only uses +/-1 offsets.
  * 
- * Formula from the image:
- * Row 1: [DD,    MM,    CC,    YY   ]
- * Row 2: [YY+1,  CC-1,  MM-3,  DD+3 ]
- * Row 3: [MM-2,  DD+2,  YY+2,  CC-2 ]
- * Row 4: [CC+1,  YY-1,  DD+1,  MM-1 ]
+ * Formula:
+ * Row 1: [a,    b,    c,    d   ] (Date: DD, MM, CC, YY)
+ * Row 2: [d+1,  c-1,  b-1,  a+1 ]
+ * Row 3: [b-1,  a+1,  d+1,  c-1 ]
+ * Row 4: [c,    d,    a,    b   ]
  */
 
 export function parseDateComponents(dateString) {
@@ -17,44 +17,21 @@ export function parseDateComponents(dateString) {
   const DD = parseInt(parts[0], 10);
   const MM = parseInt(parts[1], 10);
   const YYYY = parseInt(parts[2], 10);
-  const CC = Math.floor(YYYY / 100); // Century (first 2 digits)
-  const YY = YYYY % 100;             // Year (last 2 digits)
+  const CC = Math.floor(YYYY / 100); // Century
+  const YY = YYYY % 100;             // Year
   return { DD, MM, CC, YY };
 }
 
-/**
- * Generate Ramanujan Magic Square using the EXACT formula from the image
- */
 export function generateDateEchoSquare(DD, MM, CC, YY) {
-  // Base magic constant = sum of the first row
-  const baseSum = DD + MM + CC + YY;
+  const magicConstant = DD + MM + CC + YY;
 
-  // Generate the square using EXACT Ramanujan formula from image
-  let square = [
-    [DD,     MM,     CC,     YY    ],  // Row 1: DD, MM, CC, YY
-    [YY + 1, CC - 1, MM - 3, DD + 3],  // Row 2: YY+1, CC-1, MM-3, DD+3
-    [MM - 2, DD + 2, YY + 2, CC - 2],  // Row 3: MM-2, DD+2, YY+2, CC-2
-    [CC + 1, YY - 1, DD + 1, MM - 1]   // Row 4: CC+1, YY-1, DD+1, MM-1
+  // Use the robust +/-1 formula to keep Row 1 matching the date exactly
+  const square = [
+    [DD, MM, CC, YY],
+    [YY + 1, CC - 1, MM - 1, DD + 1],
+    [MM - 1, DD + 1, YY + 1, CC - 1],
+    [CC, YY, DD, MM]
   ];
-
-  // Find the minimum value in the square
-  let minVal = 0;
-  for (let row of square) {
-    for (let val of row) {
-      if (val < minVal) minVal = val;
-    }
-  }
-
-  // If there are negative values, add offset to make all non-negative
-  // This preserves the magic property (all sums increase by 4 × offset)
-  let offset = 0;
-  if (minVal < 0) {
-    offset = Math.abs(minVal);
-    square = square.map(row => row.map(val => val + offset));
-  }
-
-  // New magic constant = baseSum + 4 × offset
-  const magicConstant = baseSum + (4 * offset);
 
   const reveals = [
     { type: 'row', index: 0, label: 'The Special Date' },

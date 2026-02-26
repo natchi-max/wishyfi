@@ -34,8 +34,10 @@ const VideoPreview = ({ blob }) => {
 
 // Helper to format numbers as two digits (e.g., 7 -> "07", 1 -> "01")
 const formatTwoDigit = (num) => {
+    const isNeg = num < 0;
     const n = Math.abs(num);
-    return n < 10 ? `0${n}` : `${n}`;
+    const s = n < 10 ? `0${n}` : `${n}`;
+    return isNeg ? `-${s}` : s;
 };
 
 const MagicSquareAnimation = ({ wishData: propWishData }) => {
@@ -141,16 +143,17 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
         const progress = frame / total;
 
         // ════════════════════════════════════════════════════════════
-        // CINEMATIC 8-SCREEN FLOW (20 SECONDS TOTAL)
+        // CINEMATIC 9-SCREEN FLOW (20 SECONDS TOTAL)
         // ════════════════════════════════════════════════════════════
-        // Screen 1 (0.00 - 0.12): Introduction - 2.4 seconds
-        // Screen 2 (0.12 - 0.25): Date Foundation - 2.6 seconds
-        // Screen 3 (0.25 - 0.38): Row Sums - 2.6 seconds
-        // Screen 4 (0.38 - 0.51): Column Sums - 2.6 seconds
-        // Screen 5 (0.51 - 0.64): Diagonal Magic - 2.6 seconds
-        // Screen 6 (0.64 - 0.77): Secret Recipe (2×2) - 2.6 seconds
-        // Screen 7 (0.77 - 0.93): Color Pattern - 3.2 seconds
-        // Screen 8 (0.93 - 1.00): Final Greeting - 1.4 seconds
+        // Screen 1 (0.00 - 0.11): Introduction
+        // Screen 2 (0.11 - 0.22): Date Foundation
+        // Screen 3 (0.22 - 0.33): Row Sums
+        // Screen 4 (0.33 - 0.44): Column Sums
+        // Screen 5 (0.44 - 0.55): Diagonal Magic
+        // Screen 6 (0.55 - 0.66): Secret Recipe (2×2)
+        // Screen 7 (0.66 - 0.78): Color Pattern
+        // Screen 8 (0.78 - 0.90): Final Greeting
+        // Screen 9 (0.90 - 1.00): Call to Action (Create Your Own)
 
         // Clear & Background
         ctx.fillStyle = bgColor;
@@ -193,9 +196,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
 
 
-        // ═══════════════════ SCREEN 1: INTRODUCTION (0.00 - 0.12) ═══════════════════
-        if (progress < 0.12) {
-            const p = progress / 0.12;
+        // ═══════════════════ SCREEN 1: INTRODUCTION (0.00 - 0.11) ═══════════════════
+        if (progress < 0.11) {
+            const p = progress / 0.11;
 
             ctx.save();
             ctx.textAlign = 'center';
@@ -246,9 +249,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 2: DATE FOUNDATION (0.12 - 0.25) ═══════════════════
-        else if (progress >= 0.12 && progress < 0.25) {
-            const p = (progress - 0.12) / 0.13;
+        // ═══════════════════ SCREEN 2: DATE FOUNDATION (0.11 - 0.22) ═══════════════════
+        else if (progress >= 0.11 && progress < 0.22) {
+            const p = (progress - 0.11) / 0.11;
             const fade = smoothFade(p, 0.2, 0.85);
 
             drawGrid(ctx, fade);
@@ -291,9 +294,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 3: ROW SUMS (0.25 - 0.38) ═══════════════════
-        else if (progress >= 0.25 && progress < 0.38) {
-            const p = (progress - 0.25) / 0.13;
+        // ═══════════════════ SCREEN 3: ROW SUMS (0.22 - 0.33) ═══════════════════
+        else if (progress >= 0.22 && progress < 0.33) {
+            const p = (progress - 0.22) / 0.11;
             const fade = smoothFade(p, 0.1, 0.9);
 
             drawGrid(ctx, 1);
@@ -386,9 +389,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 4: COLUMN SUMS (0.38 - 0.51) ═══════════════════
-        else if (progress >= 0.38 && progress < 0.51) {
-            const p = (progress - 0.38) / 0.13;
+        // ═══════════════════ SCREEN 4: COLUMN SUMS (0.33 - 0.44) ═══════════════════
+        else if (progress >= 0.33 && progress < 0.44) {
+            const p = (progress - 0.33) / 0.11;
             const fade = smoothFade(p, 0.1, 0.9);
 
             drawGrid(ctx, 1);
@@ -481,9 +484,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 5: DIAGONAL MAGIC (0.51 - 0.64) ═══════════════════
-        else if (progress >= 0.51 && progress < 0.64) {
-            const p = (progress - 0.51) / 0.13;
+        // ═══════════════════ SCREEN 5: DIAGONAL MAGIC (0.44 - 0.55) ═══════════════════
+        else if (progress >= 0.44 && progress < 0.55) {
+            const p = (progress - 0.44) / 0.11;
             const fade = smoothFade(p, 0.1, 0.9);
 
             drawGrid(ctx, 1);
@@ -619,9 +622,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // ═══════════════════ SCREEN 6: SECRET RECIPE / 2×2 QUADRANTS (0.64 - 0.77) ═══════════════════
-        else if (progress >= 0.64 && progress < 0.77) {
-            const p = (progress - 0.64) / 0.13;
+        // ═══════════════════ SCREEN 6: SECRET RECIPE / 2×2 QUADRANTS (0.55 - 0.66) ═══════════════════
+        else if (progress >= 0.55 && progress < 0.66) {
+            const p = (progress - 0.55) / 0.11;
             const fade = smoothFade(p, 0.2, 0.85);
 
             drawGrid(ctx, 1);
@@ -678,9 +681,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 7: COLOR PATTERN (0.77 - 0.93) ═══════════════════
-        else if (progress >= 0.77 && progress < 0.93) {
-            const p = (progress - 0.77) / 0.16;
+        // ═══════════════════ SCREEN 7: COLOR PATTERN (0.66 - 0.78) ═══════════════════
+        else if (progress >= 0.66 && progress < 0.78) {
+            const p = (progress - 0.66) / 0.12;
             const fade = smoothFade(p, 0.15, 0.85);
 
             drawGrid(ctx, 1);
@@ -775,9 +778,9 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             }
         }
 
-        // ═══════════════════ SCREEN 8: FINAL GREETING (0.93 - 1.00) ═══════════════════
-        else if (progress >= 0.93) {
-            const p = (progress - 0.93) / 0.07;
+        // ═══════════════════ SCREEN 8: FINAL GREETING (0.78 - 0.90) ═══════════════════
+        else if (progress >= 0.78 && progress < 0.90) {
+            const p = (progress - 0.78) / 0.12;
             const fade = Math.min(1, p / 0.2);
 
             // 1. Draw Background
@@ -906,7 +909,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             // Recipient Name
             ctx.fillStyle = '#ffffff';
             ctx.font = `italic ${size * 0.05}px 'Playfair Display', serif`;
-            ctx.fillText(`For ${wishData?.recipientName || 'You'}`, size / 2, size * 0.39);
+            ctx.fillText(`${wishData?.recipientName || 'You'}`, size / 2, size * 0.39);
 
             // Wish Message
             ctx.font = `${size * 0.035}px 'Inter', sans-serif`;
@@ -942,7 +945,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             if (wishData?.senderName) {
                 ctx.font = `italic bold ${size * 0.03}px 'Playfair Display', serif`;
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(`— Warmly, ${wishData.senderName}`, size / 2, size * 0.85);
+                ctx.fillText(`— ${wishData.senderName}`, size / 2, size * 0.85);
             }
 
             // Simple Branding
@@ -976,7 +979,58 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             ctx.restore();
         }
 
-        // Interactive effects removed for simplicity
+        // ═══════════════════ SCREEN 9: CALL TO ACTION (0.90 - 1.00) ═══════════════════
+        else if (progress >= 0.90) {
+            const p = (progress - 0.90) / 0.10;
+            const fade = smoothFade(p, 0.2, 0.9);
+
+            // Background - Elegant gradient
+            const grad = ctx.createLinearGradient(0, 0, size, size);
+            const baseColor = TinyColor(highlightColor).isValid() ? highlightColor : '#667eea';
+            grad.addColorStop(0, TinyColor(baseColor).darken(20).toString());
+            grad.addColorStop(1, TinyColor(baseColor).darken(40).toString());
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, size, size);
+
+            ctx.save();
+            ctx.globalAlpha = fade;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Floating particles for Screen 9
+            for (let i = 0; i < 15; i++) {
+                const seed = i * 123;
+                const px = (seed % size);
+                const py = ((seed * 7) % size);
+                const move = Math.sin(p * 2 + i) * 20;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.arc(px, py + move, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Create Your Own Text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.07}px 'Playfair Display', serif`;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 20;
+            ctx.fillText('Create your own at', size / 2, size / 2 - 20);
+
+            // Website URL
+            ctx.fillStyle = '#fcd34d'; // Gold
+            ctx.font = `bold ${size * 0.09}px 'Poppins', sans-serif`;
+            ctx.shadowColor = 'rgba(252, 211, 77, 0.5)';
+            ctx.shadowBlur = 30;
+            ctx.fillText('wishyfi.com', size / 2, size / 2 + 50);
+
+            // Subtitle
+            ctx.font = `${size * 0.03}px 'Inter', sans-serif`;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.shadowBlur = 0;
+            ctx.fillText('Mathematical Magic • Unique 4×4 Squares', size / 2, size - 100);
+
+            ctx.restore();
+        }
 
     }, [displaySquare, magicConstant, startX, startY, cellSize, gridSize, drawGrid, highlightColor, bgColor, wishData, bgImage]);
 
@@ -1071,7 +1125,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             return;
         }
 
-        const filename = `magic_wish_${wishData?.recipientName || 'special'}_${Date.now()}.webm`;
+        const filename = `magic_wish_${wishData?.recipientName || 'special'}_${Date.now()}.mp4`;
         const success = downloadVideoBlob(videoBlob, filename);
 
         if (!success) {

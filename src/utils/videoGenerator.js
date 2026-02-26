@@ -33,8 +33,11 @@ export async function createAnimatedVideo(
       const stream = canvas.captureStream(fps);
 
       // Setup MediaRecorder
+      const supportedTypes = getSupportedVideoTypes();
+      const mimeType = supportedTypes.length > 0 ? supportedTypes[0] : 'video/webm';
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9', // Use VP9 for better quality
+        mimeType,
         videoBitsPerSecond: 2500000 // 2.5 Mbps for good quality
       });
 
@@ -47,7 +50,7 @@ export async function createAnimatedVideo(
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
+        const blob = new Blob(chunks, { type: mimeType });
         resolve(blob);
       };
 
@@ -143,11 +146,11 @@ export function isVideoRecordingSupported() {
  */
 export function getSupportedVideoTypes() {
   const types = [
+    'video/mp4;codecs=h264',
+    'video/mp4',
     'video/webm;codecs=vp9',
     'video/webm;codecs=vp8',
-    'video/webm',
-    'video/mp4;codecs=h264',
-    'video/mp4'
+    'video/webm'
   ];
 
   return types.filter(type => MediaRecorder.isTypeSupported(type));
