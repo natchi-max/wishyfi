@@ -750,7 +750,7 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
                 // Animated title text
                 const titleText = p < 0.5
                     ? `Color Magic Appears...`
-                    : `Beautiful 4-Color Pattern`;
+                    : `Each color pattern sums to ${magicConstant}`;
 
                 ctx.fillText(titleText, startX + gridSize / 2, startY - 35);
 
