@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import './MagicSquareAnimation.css';
 import { parseDateComponents, generateDateEchoSquare } from '../utils/magicSquare';
-import { createAnimatedVideo, downloadVideoBlob, isVideoRecordingSupported } from '../utils/videoGenerator';
+import { createAnimatedVideo, downloadVideoBlob, isVideoRecordingSupported, getVideoExtension } from '../utils/videoGenerator';
 import { shareGifFile, getShareSupport } from '../utils/shareUtils';
 import { ProgressBar } from './LoadingComponents';
 import TinyColor from 'tinycolor2';
@@ -1121,6 +1121,12 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
 
             if (blob && blob.size > 0) {
                 setVideoBlob(blob);
+
+                // Auto-download immediately after generation
+                const ext = getVideoExtension(blob._mimeType || blob.type);
+                const filename = `magic_wish_${wishData?.recipientName || 'special'}_${Date.now()}${ext}`;
+                downloadVideoBlob(blob, filename);
+
                 return blob;
             } else {
                 throw new Error('Generated video is empty or invalid');
@@ -1142,7 +1148,8 @@ const MagicSquareAnimation = ({ wishData: propWishData }) => {
             return;
         }
 
-        const filename = `magic_wish_${wishData?.recipientName || 'special'}_${Date.now()}.mp4`;
+        const ext = getVideoExtension(videoBlob._mimeType || videoBlob.type);
+        const filename = `magic_wish_${wishData?.recipientName || 'special'}_${Date.now()}${ext}`;
         const success = downloadVideoBlob(videoBlob, filename);
 
         if (!success) {

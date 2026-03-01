@@ -22,9 +22,11 @@ export async function shareGifFile(mediaBlob, wishData, message = '', url = unde
     }
 
     // Determine file type and extension
-    const mimeType = mediaBlob.type || 'image/gif';
+    const mimeType = mediaBlob._mimeType || mediaBlob.type || 'image/gif';
     const isVideo = mimeType.startsWith('video/');
-    const extension = isVideo ? '.mp4' : '.gif';
+    const extension = isVideo
+        ? (mimeType.includes('mp4') ? '.mp4' : '.webm')
+        : '.gif';
 
     // Create File object from blob
     const filename = `magic-wish-${wishData?.recipientName || 'special'}-${Date.now()}${extension}`;
